@@ -22,6 +22,7 @@
             <p class="panel-empty">No re-evaluation requests found<c:if test="${statusFilter != 'ALL'}"> with status <c:out value="${statusFilter}"/></c:if>.</p>
         </c:when>
         <c:otherwise>
+            <div class="table-scroll">
             <table id="requestsTable" class="display" style="width:100%">
                 <thead>
                 <tr><th>Roll No.</th><th>Student</th><th>Exam</th><th>Subject</th><th>Status</th><th>Assigned To</th><th>Requested</th><th></th></tr>
@@ -53,6 +54,7 @@
                 </c:forEach>
                 </tbody>
             </table>
+            </div>
         </c:otherwise>
     </c:choose>
 </div>

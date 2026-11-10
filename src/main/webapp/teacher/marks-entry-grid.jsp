@@ -44,6 +44,7 @@
         <input type="hidden" name="sectionId" value="${assignment.section.id}">
         <input type="hidden" name="action" id="actionField" value="save">
 
+        <div class="table-scroll">
         <table id="marksTable" style="width:100%;">
             <thead>
             <tr>
@@ -102,6 +103,7 @@
             </c:forEach>
             </tbody>
         </table>
+        </div>
 
         <c:if test="${examOpenForEntry}">
         <div style="display:flex; gap:var(--space-3); margin-top:var(--space-6);">

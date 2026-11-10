@@ -11,6 +11,7 @@
             <div class="panel-empty"><p>No teachers yet. New teachers appear here once their public Registration is approved from the <a href="${ctx}/admin/registrations">Registrations</a> queue.</p></div>
         </c:when>
         <c:otherwise>
+    <div class="table-scroll">
     <table id="teachersTable" class="display" style="width:100%">
         <thead>
         <tr>
@@ -63,6 +64,7 @@
         </c:forEach>
         </tbody>
     </table>
+    </div>
         </c:otherwise>
     </c:choose>
 </div>

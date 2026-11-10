@@ -7,6 +7,7 @@
 
 <div class="panel" style="margin-bottom:var(--space-6);">
     <h2>Current Result</h2>
+    <div class="table-scroll">
     <table style="width:100%;">
         <tr><td style="font-weight:600; width:180px;">Student</td><td><c:out value="${result.student.user.fullName}"/> (<c:out value="${result.student.rollNo}"/>)</td></tr>
         <tr><td style="font-weight:600;">Subject</td><td><c:out value="${result.subject.subjectCode}"/> &mdash; <c:out value="${result.subject.subjectName}"/></td></tr>
@@ -19,6 +20,7 @@
             <td><c:out value="${empty result.totalMarks ? 'not yet calculated' : result.totalMarks}"/>
                 <c:if test="${not empty result.percentage}"> &mdash; <c:out value="${result.percentage}"/>% &mdash; <c:out value="${result.grade}"/></c:if></td></tr>
     </table>
+    </div>
 </div>
 
 <div class="panel" style="margin-bottom:var(--space-6);">
@@ -28,6 +30,7 @@
             <p class="panel-empty">No corrections have been made to this result. Marks are exactly as originally entered.</p>
         </c:when>
         <c:otherwise>
+            <div class="table-scroll">
             <table id="historyTable" class="display" style="width:100%">
                 <thead>
                 <tr><th>Theory</th><th>Practical</th><th>Internal</th><th>Changed By</th><th>Reason</th><th>When</th></tr>
@@ -45,6 +48,7 @@
                 </c:forEach>
                 </tbody>
             </table>
+            </div>
         </c:otherwise>
     </c:choose>
 </div>

@@ -15,6 +15,7 @@
                  than a grouped one. Subject-first column order and default
                  sort is the only real difference: same rows, framed around
                  "which subjects do I teach" instead of "which classes." --%>
+            <div class="table-scroll">
             <table id="subjectsTable" class="display" style="width:100%">
                 <thead>
                 <tr>
@@ -37,6 +38,7 @@
                 </c:forEach>
                 </tbody>
             </table>
+            </div>
         </c:otherwise>
     </c:choose>
 </div>

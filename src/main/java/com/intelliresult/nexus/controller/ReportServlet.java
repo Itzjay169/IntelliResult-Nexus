@@ -1,7 +1,5 @@
 package com.intelliresult.nexus.controller;
 
-import com.intelliresult.nexus.dao.ActivityLogDAO;
-import com.intelliresult.nexus.dao.ActivityLogDAOImpl;
 import com.intelliresult.nexus.dao.AcademicYearDAO;
 import com.intelliresult.nexus.dao.AcademicYearDAOImpl;
 import com.intelliresult.nexus.dao.ExamDAO;
@@ -15,6 +13,7 @@ import com.intelliresult.nexus.entity.SystemSetting;
 import com.intelliresult.nexus.entity.User;
 import com.intelliresult.nexus.exception.BaseApplicationException;
 import com.intelliresult.nexus.exception.ValidationException;
+import com.intelliresult.nexus.service.ActivityLogService;
 import com.intelliresult.nexus.service.ReportService;
 import com.intelliresult.nexus.service.ReportType;
 import com.intelliresult.nexus.service.SystemSettingsService;
@@ -62,7 +61,7 @@ public class ReportServlet extends HttpServlet {
     private final SubjectDAO subjectDAO = new SubjectDAOImpl();
     private final AcademicYearDAO academicYearDAO = new AcademicYearDAOImpl();
     private final SystemSettingsService systemSettingsService = new SystemSettingsService();
-    private final ActivityLogDAO activityLogDAO = new ActivityLogDAOImpl();
+    private final ActivityLogService activityLogService = new ActivityLogService();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -107,7 +106,7 @@ public class ReportServlet extends HttpServlet {
             SystemSetting settings = systemSettingsService.getSettings();
             byte[] pdf = PDFUtil.buildTabularReport(data, settings, LocalDateTime.now());
 
-            activityLogDAO.save(new ActivityLog(currentUser, "REPORT_GENERATED",
+            activityLogService.log(new ActivityLog(currentUser, "REPORT_GENERATED",
                     data.title() + " - " + data.subtitle() + " (PDF)", request.getRemoteAddr()));
 
             streamFile(response, pdf, "application/pdf", filenameFor(data, "pdf"));
@@ -127,7 +126,7 @@ public class ReportServlet extends HttpServlet {
             ReportData data = buildReportData(request);
             byte[] xlsx = ExcelUtil.writeXlsx(data.title(), data.columnHeaders(), data.rows());
 
-            activityLogDAO.save(new ActivityLog(currentUser, "REPORT_GENERATED",
+            activityLogService.log(new ActivityLog(currentUser, "REPORT_GENERATED",
                     data.title() + " - " + data.subtitle() + " (Excel)", request.getRemoteAddr()));
 
             streamFile(response, xlsx,

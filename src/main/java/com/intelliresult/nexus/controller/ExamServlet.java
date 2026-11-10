@@ -6,6 +6,7 @@ import com.intelliresult.nexus.dao.SemesterDAO;
 import com.intelliresult.nexus.dao.SemesterDAOImpl;
 import com.intelliresult.nexus.entity.Exam;
 import com.intelliresult.nexus.entity.User;
+import com.intelliresult.nexus.entity.enums.ExamStatus;
 import com.intelliresult.nexus.entity.enums.ExamType;
 import com.intelliresult.nexus.exception.BaseApplicationException;
 import com.intelliresult.nexus.exception.ValidationException;
@@ -50,6 +51,7 @@ public class ExamServlet extends HttpServlet {
     private final ExamService examService = new ExamService();
     private final ExamDAO examDAO = new ExamDAOImpl();
     private final SemesterDAO semesterDAO = new SemesterDAOImpl();
+    private final com.intelliresult.nexus.service.NotificationService notificationService = new com.intelliresult.nexus.service.NotificationService();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -109,16 +111,33 @@ public class ExamServlet extends HttpServlet {
                 flashSuccessAndRedirect(request, response, "Exam restored.");
             } else if (path.endsWith("/advance-status")) {
                 Exam updated = examService.advanceStatus(parseId(request), currentAdmin.getId());
+                if (updated.getStatus() == ExamStatus.SCHEDULED) {
+                    try {
+                        notificationService.notifyExamScheduled(updated);
+                    } catch (Exception e) {
+                        LOGGER.error("Could not send exam scheduled notifications", e);
+                    }
+                }
                 flashSuccessAndRedirect(request, response, "Exam advanced to " + updated.getStatus().name() + ".");
             } else {
                 String idParam = request.getParameter("id");
                 if (idParam == null || idParam.isBlank()) {
-                    examService.createExam(parseCreateRequest(request), currentAdmin.getId());
+                    Exam created = examService.createExam(parseCreateRequest(request), currentAdmin.getId());
+                    try {
+                        notificationService.notifyExamCreated(created);
+                    } catch (Exception e) {
+                        LOGGER.error("Could not send exam created notifications", e);
+                    }
                     flashSuccessAndRedirect(request, response, "Exam created.");
                 } else {
-                    examService.updateExam(Long.valueOf(idParam), request.getParameter("name"),
+                    Exam updated = examService.updateExam(Long.valueOf(idParam), request.getParameter("name"),
                             parseDateTime(request.getParameter("startTime")), parseDateTime(request.getParameter("endTime")),
                             parseInt(request.getParameter("attemptLimit")), parseDecimal(request.getParameter("defaultMaxMarks")));
+                    try {
+                        notificationService.notifyExamUpdated(updated, true);
+                    } catch (Exception e) {
+                        LOGGER.error("Could not send exam updated notifications", e);
+                    }
                     flashSuccessAndRedirect(request, response, "Exam updated.");
                 }
             }

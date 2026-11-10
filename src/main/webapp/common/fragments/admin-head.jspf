@@ -20,6 +20,22 @@
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/tokens.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/app-shell.css">
+    <%-- Shared client libraries for every admin page: jQuery + DataTables (Sec. 6/44
+         tables, Responsive on by default per Sec. 44), Chart.js (Sec. 5 dashboard
+         charts), SweetAlert2 (Sec. 22 confirmation dialogs), Toastr (Sec. 45 feedback).
+         Loaded here, in <head>, and NOT in the footer: every page's own inline <script>
+         sits before the footer include and calls $, Chart, Swal and toastr while the
+         page is still parsing, so a library loaded in the footer would not exist yet. --%>
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.1.8/css/dataTables.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/3.0.8/css/responsive.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/css/toastr.min.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/3.0.8/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/js/toastr.min.js"></script>
+    <script>$.fn.dataTable.defaults.responsive = true;</script>
 </head>
 <body>
 <a href="#main-content" class="skip-link">Skip to main content</a>
@@ -67,6 +83,7 @@
                 <div class="sidebar-group-label">Examinations</div>
                 <a class="sidebar-link ${currentPath == '/admin/exams' ? 'active' : ''}" href="${ctx}/admin/exams"><span class="dot"></span>Exams</a>
                 <a class="sidebar-link ${currentPath == '/admin/results' ? 'active' : ''}" href="${ctx}/admin/results"><span class="dot"></span>Results</a>
+                <a class="sidebar-link ${currentPath == '/admin/student-performance' ? 'active' : ''}" href="${ctx}/admin/student-performance"><span class="dot"></span>Student Performance</a>
                 <a class="sidebar-link ${currentPath == '/admin/approvals' ? 'active' : ''}" href="${ctx}/admin/approvals"><span class="dot"></span>Approvals</a>
                 <a class="sidebar-link ${currentPath == '/admin/revaluations' ? 'active' : ''}" href="${ctx}/admin/revaluations"><span class="dot"></span>Re-evaluations</a>
                 <a class="sidebar-link ${currentPath == '/admin/grading-rules' ? 'active' : ''}" href="${ctx}/admin/grading-rules"><span class="dot"></span>Grading Rules</a>
@@ -122,6 +139,17 @@
                     </c:if>
                 </div>
             </div>
-            <a href="${ctx}/change-password" style="font-size:0.85rem;color:var(--color-ink-soft);text-decoration:none;">Change password</a>
+            <div style="display:flex; align-items:center; gap:var(--space-4);">
+                <a href="${ctx}/admin/notifications" style="position:relative; display:inline-flex; align-items:center; text-decoration:none; color:var(--color-ink);" aria-label="Notifications">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
+                    <c:if test="${not empty unreadNotificationCount and unreadNotificationCount > 0}">
+                        <span style="position:absolute; top:-6px; right:-8px; background:var(--color-danger); color:#fff; font-size:0.7rem; font-weight:700; border-radius:10px; padding:1px 5px; min-width:16px; text-align:center;">${unreadNotificationCount}</span>
+                    </c:if>
+                </a>
+                <a href="${ctx}/change-password" style="font-size:0.85rem;color:var(--color-ink-soft);text-decoration:none;">Change password</a>
+            </div>
         </header>
         <main class="page-body" id="main-content">

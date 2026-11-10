@@ -35,6 +35,7 @@
             </p>
         </c:when>
         <c:otherwise>
+            <div class="table-scroll">
             <table id="rulesTable" class="display" style="width:100%">
                 <thead>
                 <tr>
@@ -72,6 +73,7 @@
                 </c:forEach>
                 </tbody>
             </table>
+            </div>
         </c:otherwise>
     </c:choose>
 </div>

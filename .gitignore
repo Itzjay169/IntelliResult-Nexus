@@ -1,9 +1,11 @@
-﻿target/
+target/
 *.class
 .idea/
 *.iml
 .vscode/
 *.log
+*.log.*
+*.log.gz
 .env
 import-*.sql
 logs/

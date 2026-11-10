@@ -77,5 +77,21 @@
         </div>
 
     </div>
+    <script>
+      document.addEventListener('submit', function (e) {
+        if (e.defaultPrevented) { return; }
+        var submitBtn = e.target.querySelector('button[type="submit"]:not([disabled]), input[type="submit"]:not([disabled])');
+        if (submitBtn) {
+          setTimeout(function () { submitBtn.disabled = true; }, 0);
+          if (submitBtn.tagName === 'INPUT') {
+            submitBtn.dataset.originalText = submitBtn.value;
+            submitBtn.value = 'Processing\u2026';
+          } else {
+            submitBtn.dataset.originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Processing\u2026';
+          }
+        }
+      });
+    </script>
 </body>
 </html>

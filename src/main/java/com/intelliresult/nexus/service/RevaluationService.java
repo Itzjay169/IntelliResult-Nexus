@@ -176,7 +176,7 @@ public class RevaluationService {
                 resultService.doCorrectResult(result.getId(), newTheoryMarks, newPracticalMarks, newInternalMarks,
                         teacherUser, "Re-evaluation approved (request #" + requestId + "): " + teacherReport);
             }
-            return request;
+            return revaluationDAO.findById(requestId).orElse(request);
         });
         notificationService.notifyRevaluationResolved(resolved);
         notificationService.notifyRevaluationResolvedToAdmin(resolved);

@@ -264,7 +264,7 @@ public class ResultService {
                 newTheoryMarks, newPracticalMarks, newInternalMarks, admin, reason));
 
         resultCalculationService.refreshSummaryIfPublished(result.getStudent(), result.getExam());
-        return result;
+        return resultDAO.findById(resultId).orElse(result);
     }
 
     private void validateNonNegative(BigDecimal marks, String label) {

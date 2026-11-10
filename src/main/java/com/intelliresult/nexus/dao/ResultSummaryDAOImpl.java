@@ -25,7 +25,8 @@ public class ResultSummaryDAOImpl extends AbstractDAO<ResultSummary, Long> imple
 
     @Override
     public List<ResultSummary> findByExam(Long examId) {
-        return namedQuery("FROM ResultSummary WHERE exam.id = :examId")
+        return namedQuery("FROM ResultSummary rs JOIN FETCH rs.student s JOIN FETCH s.user "
+                        + "JOIN FETCH rs.exam WHERE rs.exam.id = :examId")
                 .setParameter("examId", examId)
                 .getResultList();
     }
@@ -79,13 +80,13 @@ public class ResultSummaryDAOImpl extends AbstractDAO<ResultSummary, Long> imple
 
     @Override
     public Optional<BigDecimal> topperPercentage(Long examId, Long sectionId) {
-        Double max = session()
+        BigDecimal max = session()
                 .createQuery("SELECT MAX(rs.overallPercentage) FROM ResultSummary rs "
-                        + "WHERE rs.exam.id = :examId AND rs.student.currentSection.id = :sectionId", Double.class)
+                        + "WHERE rs.exam.id = :examId AND rs.student.currentSection.id = :sectionId", BigDecimal.class)
                 .setParameter("examId", examId)
                 .setParameter("sectionId", sectionId)
                 .uniqueResult();
-        return max == null ? Optional.empty() : Optional.of(BigDecimal.valueOf(max).setScale(2, RoundingMode.HALF_UP));
+        return max == null ? Optional.empty() : Optional.of(max.setScale(2, RoundingMode.HALF_UP));
     }
 
     /**
@@ -118,23 +119,46 @@ public class ResultSummaryDAOImpl extends AbstractDAO<ResultSummary, Long> imple
      */
     @Override
     public void recalculateRanks(Long examId) {
-        session().createNativeQuery("""
-                UPDATE result_summaries rs
-                JOIN students st ON rs.student_id = st.id
-                JOIN (
-                    SELECT rs2.id AS summary_id,
-                           RANK() OVER (PARTITION BY st2.current_section_id ORDER BY rs2.overall_percentage DESC) AS class_rank,
-                           RANK() OVER (ORDER BY rs2.overall_percentage DESC) AS overall_rank
+        session().flush();
+        session().doWork(connection -> {
+            String dbProduct = connection.getMetaData().getDatabaseProductName();
+            String sql;
+            if ("H2".equalsIgnoreCase(dbProduct)) {
+                sql = """
+                    MERGE INTO result_summaries (id, class_rank, overall_rank)
+                    KEY (id)
+                    SELECT rs2.id,
+                           RANK() OVER (PARTITION BY st2.current_section_id ORDER BY rs2.overall_percentage DESC),
+                           RANK() OVER (ORDER BY rs2.overall_percentage DESC)
                     FROM result_summaries rs2
                     JOIN students st2 ON rs2.student_id = st2.id
-                    WHERE rs2.exam_id = :examId
-                ) ranked ON ranked.summary_id = rs.id
-                SET rs.class_rank = ranked.class_rank,
-                    rs.overall_rank = ranked.overall_rank
-                WHERE rs.exam_id = :examId
-                """)
-                .setParameter("examId", examId)
-                .executeUpdate();
+                    WHERE rs2.exam_id = ?
+                    """;
+            } else {
+                sql = """
+                    UPDATE result_summaries rs
+                    JOIN students st ON rs.student_id = st.id
+                    JOIN (
+                        SELECT rs2.id AS summary_id,
+                               RANK() OVER (PARTITION BY st2.current_section_id ORDER BY rs2.overall_percentage DESC) AS class_rank,
+                               RANK() OVER (ORDER BY rs2.overall_percentage DESC) AS overall_rank
+                        FROM result_summaries rs2
+                        JOIN students st2 ON rs2.student_id = st2.id
+                        WHERE rs2.exam_id = ?
+                    ) ranked ON ranked.summary_id = rs.id
+                    SET rs.class_rank = ranked.class_rank,
+                        rs.overall_rank = ranked.overall_rank
+                    WHERE rs.exam_id = ?
+                    """;
+            }
+            try (var ps = connection.prepareStatement(sql)) {
+                ps.setLong(1, examId);
+                if (!"H2".equalsIgnoreCase(dbProduct)) {
+                    ps.setLong(2, examId);
+                }
+                ps.executeUpdate();
+            }
+        });
         session().clear();
     }
 }

@@ -12,6 +12,7 @@ import com.intelliresult.nexus.dao.dto.SubjectAverageDTO;
 import com.intelliresult.nexus.entity.Result;
 import com.intelliresult.nexus.entity.ResultSummary;
 import com.intelliresult.nexus.entity.Student;
+import com.intelliresult.nexus.service.dto.StudentPerformanceRow;
 import com.intelliresult.nexus.service.dto.SubjectComparison;
 import com.intelliresult.nexus.service.dto.SubjectInsight;
 import com.intelliresult.nexus.util.GradeUtil;
@@ -88,6 +89,62 @@ public class StudentAnalyticsService {
                 .filter(s -> s.getRollNo().toUpperCase().contains(normalized)
                         || s.getUser().getFullName().toUpperCase().contains(normalized))
                 .toList();
+    }
+
+    /** Builds summary rows for the student results and performance overview. */
+    public List<StudentPerformanceRow> buildPerformanceOverview(List<Student> students) {
+        List<StudentPerformanceRow> rows = new ArrayList<>(students.size());
+        for (Student s : students) {
+            List<ResultSummary> summaries = resultSummaryDAO.findAllForStudent(s.getId());
+            int completedCount = summaries.size();
+            BigDecimal avg = null;
+            boolean pass = true;
+            String latestGrade = null;
+            Integer latestRank = null;
+            BigDecimal latestSgpa = null;
+            BigDecimal cgpa = null;
+
+            if (!summaries.isEmpty()) {
+                List<BigDecimal> pctList = summaries.stream()
+                        .map(ResultSummary::getOverallPercentage)
+                        .filter(java.util.Objects::nonNull)
+                        .toList();
+                if (!pctList.isEmpty()) {
+                    avg = average(pctList);
+                }
+                ResultSummary latest = summaries.get(summaries.size() - 1);
+                pass = latest.isPass();
+                latestGrade = latest.getOverallGrade();
+                latestRank = latest.getClassRank();
+
+                for (int i = summaries.size() - 1; i >= 0; i--) {
+                    if (summaries.get(i).getSgpa() != null) {
+                        latestSgpa = summaries.get(i).getSgpa();
+                        break;
+                    }
+                }
+
+                for (int i = summaries.size() - 1; i >= 0; i--) {
+                    if (summaries.get(i).getCgpa() != null) {
+                        cgpa = summaries.get(i).getCgpa();
+                        break;
+                    }
+                }
+                if (cgpa == null) {
+                    List<GradeUtil.WeightedValue> sgpas = new ArrayList<>();
+                    for (ResultSummary rs : summaries) {
+                        if (rs.getSgpa() != null) {
+                            BigDecimal cr = rs.getTotalCredits() != null && rs.getTotalCredits().compareTo(BigDecimal.ZERO) > 0
+                                    ? rs.getTotalCredits() : BigDecimal.ONE;
+                            sgpas.add(new GradeUtil.WeightedValue(rs.getSgpa(), cr));
+                        }
+                    }
+                    cgpa = GradeUtil.weightedAverage(sgpas).orElse(latestSgpa);
+                }
+            }
+            rows.add(new StudentPerformanceRow(s, completedCount, avg, pass, latestGrade, latestRank, latestSgpa, cgpa));
+        }
+        return rows;
     }
 
     /** Same section-scoping as {@link #searchStudentsTaughtBy} but for a single already-known id - the detail view's own authorization check (a teacher opening a direct link to a student outside their sections gets "not found," not this student's data). */

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-configuration PUBLIC
+        "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+        "http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
+<hibernate-configuration>
+    <session-factory>
+
+        <!--
+            Test-scope twin of src/main/resources/hibernate.cfg.xml (shadows
+            it on the test classpath the same way application.properties
+            does). Only one line differs from the main file - driver_class
+            (H2 instead of MySQL) - because HibernateUtil.buildSessionFactory()
+            does not override it programmatically (only url/username/password/
+            pool-size/hbm2ddl are layered on from AppConfig). Everything else,
+            including the full entity mapping list, must stay identical to the
+            real config or a test would validate against a different set of
+            entities than production actually runs.
+
+            Hibernate 7 auto-detects the dialect from the JDBC connection,
+            so no explicit hibernate.dialect property is needed (HHH90000025).
+        -->
+        <property name="hibernate.current_session_context_class">managed</property>
+        <property name="hibernate.connection.provider_class">hikaricp</property>
+        <property name="hibernate.connection.driver_class">org.h2.Driver</property>
+
+        <property name="hibernate.show_sql">false</property>
+        <property name="hibernate.format_sql">true</property>
+        <property name="hibernate.highlight_sql">false</property>
+        <property name="hibernate.hbm2ddl.auto">validate</property>
+        <property name="hibernate.generate_statistics">false</property>
+
+        <!-- ENTITY MAPPINGS - kept in exact sync with the main hibernate.cfg.xml. -->
+        <mapping class="com.intelliresult.nexus.entity.Department"/>
+        <mapping class="com.intelliresult.nexus.entity.Course"/>
+        <mapping class="com.intelliresult.nexus.entity.AcademicYear"/>
+        <mapping class="com.intelliresult.nexus.entity.Semester"/>
+        <mapping class="com.intelliresult.nexus.entity.Section"/>
+        <mapping class="com.intelliresult.nexus.entity.Subject"/>
+        <mapping class="com.intelliresult.nexus.entity.User"/>
+        <mapping class="com.intelliresult.nexus.entity.Student"/>
+        <mapping class="com.intelliresult.nexus.entity.Teacher"/>
+        <mapping class="com.intelliresult.nexus.entity.TeacherSubject"/>
+        <mapping class="com.intelliresult.nexus.entity.Exam"/>
+        <mapping class="com.intelliresult.nexus.entity.Result"/>
+        <mapping class="com.intelliresult.nexus.entity.ResultSummary"/>
+        <mapping class="com.intelliresult.nexus.entity.ResultHistory"/>
+        <mapping class="com.intelliresult.nexus.entity.RevaluationRequest"/>
+        <mapping class="com.intelliresult.nexus.entity.GradingRule"/>
+        <mapping class="com.intelliresult.nexus.entity.Notification"/>
+        <mapping class="com.intelliresult.nexus.entity.ActivityLog"/>
+        <mapping class="com.intelliresult.nexus.entity.Notice"/>
+        <mapping class="com.intelliresult.nexus.entity.SystemSetting"/>
+        <mapping class="com.intelliresult.nexus.entity.MarksheetVerification"/>
+        <mapping class="com.intelliresult.nexus.entity.RegistrationRequest"/>
+        <mapping class="com.intelliresult.nexus.entity.OtpCode"/>
+        <mapping class="com.intelliresult.nexus.entity.PasswordResetRequest"/>
+
+    </session-factory>
+</hibernate-configuration>

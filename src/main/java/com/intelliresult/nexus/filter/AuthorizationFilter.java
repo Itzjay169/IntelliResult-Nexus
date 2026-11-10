@@ -1,10 +1,9 @@
 package com.intelliresult.nexus.filter;
 
-import com.intelliresult.nexus.dao.ActivityLogDAO;
-import com.intelliresult.nexus.dao.ActivityLogDAOImpl;
 import com.intelliresult.nexus.entity.ActivityLog;
 import com.intelliresult.nexus.entity.User;
 import com.intelliresult.nexus.entity.enums.UserRole;
+import com.intelliresult.nexus.service.ActivityLogService;
 import com.intelliresult.nexus.util.AppConstants;
 import com.intelliresult.nexus.util.NavigationUtil;
 import jakarta.servlet.FilterChain;
@@ -37,7 +36,7 @@ public class AuthorizationFilter implements jakarta.servlet.Filter {
 
     private static final Logger LOGGER = LogManager.getLogger(AuthorizationFilter.class);
 
-    private final ActivityLogDAO activityLogDAO = new ActivityLogDAOImpl();
+    private final ActivityLogService activityLogService = new ActivityLogService();
 
     // LinkedHashMap: prefixes are checked in this declared order, most
     // specific first, so a hypothetical future overlapping prefix can't
@@ -65,7 +64,7 @@ public class AuthorizationFilter implements jakarta.servlet.Filter {
         if (requiredRole != null && currentUser != null && currentUser.getRole() != requiredRole) {
             LOGGER.warn("User {} (role {}) denied access to {} (requires {})",
                     currentUser.getEmail(), currentUser.getRole(), path, requiredRole);
-            activityLogDAO.save(new ActivityLog(currentUser, "UNAUTHORIZED_ACCESS_ATTEMPT",
+            activityLogService.log(new ActivityLog(currentUser, "UNAUTHORIZED_ACCESS_ATTEMPT",
                     "Attempted to access " + path + " (requires " + requiredRole + ")",
                     request.getRemoteAddr()));
 

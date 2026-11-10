@@ -654,19 +654,25 @@ CREATE TABLE grading_rules (
 ) ENGINE=InnoDB;
 
 -- ----------------------------------------------------------------------------
--- notifications (Section 23) - exact spec field list, nothing added.
+-- notifications (Section 23) - in-app notification system with type & entity links.
 -- ----------------------------------------------------------------------------
 CREATE TABLE notifications (
-    id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    user_id     BIGINT UNSIGNED NOT NULL,
-    title       VARCHAR(200)    NOT NULL,
-    message     TEXT            NOT NULL,
-    is_read     BOOLEAN         NOT NULL DEFAULT FALSE,
-    created_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    id                  BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id             BIGINT UNSIGNED NOT NULL,
+    title               VARCHAR(200)    NOT NULL,
+    message             TEXT            NOT NULL,
+    is_read             BOOLEAN         NOT NULL DEFAULT FALSE,
+    created_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    notification_type   VARCHAR(50)     NOT NULL DEFAULT 'GENERAL',
+    related_entity_type VARCHAR(50)     NULL,
+    related_entity_id   BIGINT UNSIGNED NULL,
+    link_url            VARCHAR(255)    NULL,
     CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users (id)
 ) ENGINE=InnoDB;
 
 CREATE INDEX idx_notifications_user_unread ON notifications (user_id, is_read);
+CREATE INDEX idx_notifications_user_unread_created ON notifications (user_id, is_read, created_at);
+CREATE INDEX idx_notifications_related ON notifications (related_entity_type, related_entity_id);
 
 -- ----------------------------------------------------------------------------
 -- activity_logs (Section 26) - append-only audit trail, never updated.

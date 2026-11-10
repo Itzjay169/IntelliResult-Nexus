@@ -4,13 +4,11 @@ import com.intelliresult.nexus.dao.RevaluationDAO;
 import com.intelliresult.nexus.dao.RevaluationDAOImpl;
 import com.intelliresult.nexus.dao.TeacherDAO;
 import com.intelliresult.nexus.dao.TeacherDAOImpl;
-import com.intelliresult.nexus.entity.ActivityLog;
 import com.intelliresult.nexus.entity.RevaluationRequest;
 import com.intelliresult.nexus.entity.User;
 import com.intelliresult.nexus.entity.enums.RevaluationStatus;
-import com.intelliresult.nexus.dao.ActivityLogDAO;
-import com.intelliresult.nexus.dao.ActivityLogDAOImpl;
 import com.intelliresult.nexus.exception.BaseApplicationException;
+import com.intelliresult.nexus.service.ActivityLogService;
 import com.intelliresult.nexus.service.RevaluationService;
 import com.intelliresult.nexus.util.AppConstants;
 import io.sentry.Sentry;
@@ -46,7 +44,7 @@ public class AdminRevaluationServlet extends HttpServlet {
     private final RevaluationDAO revaluationDAO = new RevaluationDAOImpl();
     private final TeacherDAO teacherDAO = new TeacherDAOImpl();
     private final RevaluationService revaluationService = new RevaluationService();
-    private final ActivityLogDAO activityLogDAO = new ActivityLogDAOImpl();
+    private final ActivityLogService activityLogService = new ActivityLogService();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -103,15 +101,28 @@ public class AdminRevaluationServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         User currentAdmin = (User) request.getAttribute(AppConstants.REQUEST_ATTR_CURRENT_USER);
-        Long requestId = Long.valueOf(request.getParameter("requestId"));
-        Long teacherId = Long.valueOf(request.getParameter("teacherId"));
+        String requestIdParam = request.getParameter("requestId");
+        String teacherIdParam = request.getParameter("teacherId");
+        Long requestId;
+        Long teacherId;
+        try {
+            if (requestIdParam == null || requestIdParam.isBlank() || teacherIdParam == null || teacherIdParam.isBlank()) {
+                throw new NumberFormatException("Missing requestId or teacherId");
+            }
+            requestId = Long.valueOf(requestIdParam);
+            teacherId = Long.valueOf(teacherIdParam);
+        } catch (NumberFormatException e) {
+            request.getSession().setAttribute("flashError", "Invalid request or teacher ID.");
+            response.sendRedirect(request.getContextPath() + "/admin/revaluations");
+            return;
+        }
         String adminRemark = request.getParameter("adminRemark");
 
         try {
             revaluationService.assignToTeacher(requestId, teacherId, adminRemark, currentAdmin.getId());
 
-            activityLogDAO.save(new ActivityLog(currentAdmin, "REVALUATION_ASSIGNED",
-                    "Request #" + requestId + " assigned to teacher #" + teacherId, request.getRemoteAddr()));
+            activityLogService.log(currentAdmin, "REVALUATION_ASSIGNED",
+                    "Request #" + requestId + " assigned to teacher #" + teacherId, request.getRemoteAddr());
 
             request.getSession().setAttribute("flashSuccess", "Request #" + requestId + " assigned. The teacher has been notified.");
             response.sendRedirect(request.getContextPath() + "/admin/revaluations");

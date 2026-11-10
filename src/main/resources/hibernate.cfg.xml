@@ -14,10 +14,9 @@
             safe to commit this file to Git.
         -->
 
-        <!-- MySQLDialect auto-negotiates feature/version specifics against the
-             live JDBC connection, so a single dialect covers MySQL 8.0 and 8.4+
-             without pinning a version-specific dialect class. -->
-        <property name="hibernate.dialect">org.hibernate.dialect.MySQLDialect</property>
+        <!-- Hibernate 7 auto-detects the dialect from the JDBC connection
+             (MySQLDialect for MySQL, H2Dialect for H2, etc.), so no explicit
+             hibernate.dialect property is needed here (HHH90000025). -->
 
         <!-- "managed" is the current-session-context strategy meant for code that
              explicitly binds/unbinds a Session to the current thread - exactly

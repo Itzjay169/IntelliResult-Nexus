@@ -9,6 +9,7 @@
 </div>
 
 <div class="panel">
+    <div class="table-scroll">
     <table id="yearsTable" class="display" style="width:100%">
         <thead><tr><th>Label</th><th>Start Date</th><th>End Date</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
@@ -33,6 +34,7 @@
         </c:forEach>
         </tbody>
     </table>
+    </div>
 </div>
 
 <form id="setCurrentForm" method="post" action="${ctx}/admin/academic-setup/academic-years/set-current" style="display:none;">

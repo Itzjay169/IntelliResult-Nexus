@@ -15,6 +15,7 @@
             <p class="panel-empty">No examinations created yet. Click <strong>+ Add Exam</strong> to schedule the first one.</p>
         </c:when>
         <c:otherwise>
+            <div class="table-scroll">
             <table id="examsTable" class="display" style="width:100%">
                 <thead>
                 <tr>
@@ -57,6 +58,7 @@
                 </c:forEach>
                 </tbody>
             </table>
+            </div>
         </c:otherwise>
     </c:choose>
 </div>

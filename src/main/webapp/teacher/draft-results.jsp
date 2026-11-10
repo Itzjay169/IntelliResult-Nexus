@@ -10,6 +10,7 @@
             <p class="panel-empty">No drafts in progress. Start from <a href="${ctx}/teacher/marks-entry">Marks Entry</a>.</p>
         </c:when>
         <c:otherwise>
+            <div class="table-scroll">
             <table id="draftsTable" class="display" style="width:100%">
                 <thead>
                 <tr>
@@ -35,6 +36,7 @@
                 </c:forEach>
                 </tbody>
             </table>
+            </div>
         </c:otherwise>
     </c:choose>
 </div>

@@ -1,16 +1,28 @@
 package com.intelliresult.nexus.controller;
 
+import com.intelliresult.nexus.dao.ExamDAO;
+import com.intelliresult.nexus.dao.ExamDAOImpl;
+import com.intelliresult.nexus.dao.NoticeDAO;
+import com.intelliresult.nexus.dao.NoticeDAOImpl;
+import com.intelliresult.nexus.dao.NotificationDAO;
+import com.intelliresult.nexus.dao.NotificationDAOImpl;
 import com.intelliresult.nexus.dao.ResultDAO;
 import com.intelliresult.nexus.dao.ResultDAOImpl;
 import com.intelliresult.nexus.dao.StudentDAO;
 import com.intelliresult.nexus.dao.StudentDAOImpl;
+import com.intelliresult.nexus.entity.Exam;
+import com.intelliresult.nexus.entity.Notice;
+import com.intelliresult.nexus.entity.Notification;
 import com.intelliresult.nexus.entity.Result;
 import com.intelliresult.nexus.entity.ResultSummary;
 import com.intelliresult.nexus.entity.Student;
 import com.intelliresult.nexus.entity.User;
+import com.intelliresult.nexus.entity.enums.ExamStatus;
+import com.intelliresult.nexus.entity.enums.UserRole;
 import com.intelliresult.nexus.service.StudentAnalyticsService;
 import com.intelliresult.nexus.service.dto.SubjectInsight;
 import com.intelliresult.nexus.util.AppConstants;
+import com.intelliresult.nexus.util.GradeUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -20,6 +32,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +72,9 @@ public class StudentDashboardServlet extends HttpServlet {
 
     private final StudentDAO studentDAO = new StudentDAOImpl();
     private final ResultDAO resultDAO = new ResultDAOImpl();
+    private final ExamDAO examDAO = new ExamDAOImpl();
+    private final NoticeDAO noticeDAO = new NoticeDAOImpl();
+    private final NotificationDAO notificationDAO = new NotificationDAOImpl();
     private final StudentAnalyticsService analyticsService = new StudentAnalyticsService();
 
     @Override
@@ -90,6 +107,27 @@ public class StudentDashboardServlet extends HttpServlet {
             request.setAttribute("improvementSubject", insights.get(insights.size() - 1));
         }
 
+        // Upcoming exams for the student's semester
+        if (student.getCurrentSection() != null && student.getCurrentSection().getSemester() != null) {
+            List<Exam> semesterExams = examDAO.findBySemester(student.getCurrentSection().getSemester().getId());
+            List<Exam> upcoming = semesterExams.stream()
+                    .filter(e -> e.getStatus() == ExamStatus.CREATED || e.getStatus() == ExamStatus.SCHEDULED || e.getStatus() == ExamStatus.ACTIVE)
+                    .sorted(Comparator.comparing(Exam::getStartTime, Comparator.nullsLast(Comparator.naturalOrder())))
+                    .limit(3)
+                    .toList();
+            request.setAttribute("upcomingExams", upcoming);
+        } else {
+            request.setAttribute("upcomingExams", List.of());
+        }
+
+        // Student notices
+        List<Notice> notices = noticeDAO.findPublishedForAudience(UserRole.STUDENT);
+        request.setAttribute("notices", notices.stream().limit(3).toList());
+
+        // Recent in-app notifications
+        List<Notification> recentNotifications = notificationDAO.findByUser(currentUser.getId());
+        request.setAttribute("recentNotifications", recentNotifications.stream().limit(3).toList());
+
         request.getRequestDispatcher("/student/dashboard.jsp").forward(request, response);
     }
 
@@ -100,7 +138,15 @@ public class StudentDashboardServlet extends HttpServlet {
                 return trend.get(i).getCgpa();
             }
         }
-        return null;
+        List<GradeUtil.WeightedValue> sgpas = new java.util.ArrayList<>();
+        for (ResultSummary s : trend) {
+            if (s.getSgpa() != null) {
+                BigDecimal cr = s.getTotalCredits() != null && s.getTotalCredits().compareTo(BigDecimal.ZERO) > 0
+                        ? s.getTotalCredits() : BigDecimal.ONE;
+                sgpas.add(new GradeUtil.WeightedValue(s.getSgpa(), cr));
+            }
+        }
+        return GradeUtil.weightedAverage(sgpas).orElse(null);
     }
 
     /** How many of this student's subjects in one exam landed on each letter grade - Sec. 17's "Grade distribution" chart, a fact about the student's own spread across subjects, not a comparison against anyone else (Sec. 15's charts are {@code /student/analysis}'s job, not this dashboard's - see PHASE11-ANALYTICS.md). LinkedHashMap, not a sorted/grouped query result, so insertion order (first grade encountered) is stable rather than alphabetical - a small enough list (at most one entry per subject) that Chart.js's own rendering order matters more than any particular sort. */

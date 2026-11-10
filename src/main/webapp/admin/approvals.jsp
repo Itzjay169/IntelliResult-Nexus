@@ -33,6 +33,7 @@
             </p>
             <form id="bulkActionForm" method="post" action="${ctx}/admin/approvals/bulk-publish">
                 <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
+                <div class="table-scroll">
                 <table id="bulkExamTable" class="display" style="width:100%">
                     <thead>
                     <tr>
@@ -53,6 +54,7 @@
                     </c:forEach>
                     </tbody>
                 </table>
+                </div>
                 <div style="margin-top:var(--space-4); display:flex; gap:var(--space-3);">
                     <button type="button" class="btn-primary" style="width:auto; padding:0.6rem 1.2rem;" onclick="confirmBulk('publish')">Bulk Publish Selected</button>
                     <button type="button" class="btn-secondary" style="width:auto; padding:0.6rem 1.2rem;" onclick="confirmBulk('lock')">Bulk Lock Selected</button>
@@ -71,6 +73,7 @@
                     <form id="approveForm" method="post" action="${ctx}/admin/approvals/approve">
                         <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
                         <input type="hidden" name="examId" value="${selectedExamId}">
+                        <div class="table-scroll">
                         <table id="pendingTable" class="display" style="width:100%">
                             <thead>
                             <tr>
@@ -99,6 +102,7 @@
                             </c:forEach>
                             </tbody>
                         </table>
+                        </div>
                         <div style="margin-top:var(--space-4);">
                             <button type="button" class="btn-primary" style="width:auto; padding:0.6rem 1.2rem;" onclick="confirmApprove();">Approve Selected</button>
                         </div>
@@ -115,6 +119,7 @@
                     <p class="panel-empty">No approved results are waiting on publishing for this examination.</p>
                 </c:when>
                 <c:otherwise>
+                    <div class="table-scroll">
                     <table id="approvedTable" class="display" style="width:100%">
                         <thead>
                         <tr>
@@ -140,6 +145,7 @@
                         </c:forEach>
                         </tbody>
                     </table>
+                    </div>
                     <form id="publishForm" method="post" action="${ctx}/admin/approvals/publish" style="margin-top:var(--space-4);">
                         <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
                         <input type="hidden" name="examId" value="${selectedExamId}">
@@ -157,6 +163,7 @@
                     <p class="panel-empty">No published results are waiting on locking for this examination.</p>
                 </c:when>
                 <c:otherwise>
+                    <div class="table-scroll">
                     <table id="publishedTable" class="display" style="width:100%">
                         <thead>
                         <tr>
@@ -176,6 +183,7 @@
                         </c:forEach>
                         </tbody>
                     </table>
+                    </div>
                     <form id="lockForm" method="post" action="${ctx}/admin/approvals/lock" style="margin-top:var(--space-4);">
                         <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
                         <input type="hidden" name="examId" value="${selectedExamId}">

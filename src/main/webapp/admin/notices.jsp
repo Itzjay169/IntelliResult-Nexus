@@ -14,6 +14,7 @@
             <p class="panel-empty">No notices yet. Click <strong>+ Add Notice</strong> to post the first one.</p>
         </c:when>
         <c:otherwise>
+            <div class="table-scroll">
             <table id="noticesTable" class="display" style="width:100%">
                 <thead>
                 <tr>
@@ -66,6 +67,7 @@
                 </c:forEach>
                 </tbody>
             </table>
+            </div>
         </c:otherwise>
     </c:choose>
 </div>

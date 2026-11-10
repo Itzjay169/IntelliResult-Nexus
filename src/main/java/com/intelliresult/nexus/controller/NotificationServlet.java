@@ -30,6 +30,7 @@ import java.io.IOException;
  */
 @WebServlet(name = "NotificationServlet", urlPatterns = {
         "/admin/notifications", "/admin/notifications/read", "/admin/notifications/read-all",
+        "/teacher/notifications", "/teacher/notifications/read", "/teacher/notifications/read-all",
         "/student/notifications", "/student/notifications/read", "/student/notifications/read-all"
 })
 public class NotificationServlet extends HttpServlet {
@@ -41,9 +42,14 @@ public class NotificationServlet extends HttpServlet {
             throws ServletException, IOException {
         User currentUser = (User) request.getAttribute(AppConstants.REQUEST_ATTR_CURRENT_USER);
         request.setAttribute("notifications", notificationService.getNotifications(currentUser.getId()));
-        String viewPath = currentUser.getRole() == UserRole.ADMIN
-                ? "/admin/notifications.jsp"
-                : "/student/notifications.jsp";
+        String viewPath;
+        if (currentUser.getRole() == UserRole.ADMIN) {
+            viewPath = "/admin/notifications.jsp";
+        } else if (currentUser.getRole() == UserRole.TEACHER) {
+            viewPath = "/teacher/notifications.jsp";
+        } else {
+            viewPath = "/student/notifications.jsp";
+        }
         request.getRequestDispatcher(viewPath).forward(request, response);
     }
 
@@ -51,7 +57,14 @@ public class NotificationServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         User currentUser = (User) request.getAttribute(AppConstants.REQUEST_ATTR_CURRENT_USER);
         String path = request.getServletPath();
-        String redirectBase = currentUser.getRole() == UserRole.ADMIN ? "/admin/notifications" : "/student/notifications";
+        String redirectBase;
+        if (currentUser.getRole() == UserRole.ADMIN) {
+            redirectBase = "/admin/notifications";
+        } else if (currentUser.getRole() == UserRole.TEACHER) {
+            redirectBase = "/teacher/notifications";
+        } else {
+            redirectBase = "/student/notifications";
+        }
 
         try {
             if (path.endsWith("/read-all")) {

@@ -1,5 +1,6 @@
 package com.intelliresult.nexus.service;
 
+import com.intelliresult.nexus.config.HibernateUtil;
 import com.intelliresult.nexus.dao.CourseDAO;
 import com.intelliresult.nexus.dao.CourseDAOImpl;
 import com.intelliresult.nexus.dao.SectionDAO;
@@ -8,18 +9,25 @@ import com.intelliresult.nexus.dao.StudentDAO;
 import com.intelliresult.nexus.dao.StudentDAOImpl;
 import com.intelliresult.nexus.dao.UserDAO;
 import com.intelliresult.nexus.dao.UserDAOImpl;
+import com.intelliresult.nexus.entity.ActivityLog;
+import com.intelliresult.nexus.entity.Course;
+import com.intelliresult.nexus.entity.Section;
+import com.intelliresult.nexus.entity.Student;
+import com.intelliresult.nexus.entity.User;
 import com.intelliresult.nexus.entity.enums.UserRole;
 import com.intelliresult.nexus.exception.DataImportException;
 import com.intelliresult.nexus.exception.ResourceNotFoundException;
 import com.intelliresult.nexus.exception.ValidationException;
-import com.intelliresult.nexus.service.dto.UserCreateRequest;
 import com.intelliresult.nexus.util.ExcelUtil;
+import com.intelliresult.nexus.util.PasswordUtil;
 import com.intelliresult.nexus.util.ValidationUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -60,11 +68,13 @@ public class StudentImportService {
     private static final int COL_EMAIL = 2;
     private static final int COL_PHONE = 3;
 
-    private final UserService userService = new UserService();
+    private record StudentRow(String rollNo, String fullName, String email, String phone) {}
+
     private final UserDAO userDAO = new UserDAOImpl();
     private final StudentDAO studentDAO = new StudentDAOImpl();
     private final CourseDAO courseDAO = new CourseDAOImpl();
     private final SectionDAO sectionDAO = new SectionDAOImpl();
+    private final ActivityLogService activityLogService = new ActivityLogService();
 
     /**
      * @return the number of students created - equal to every data row in
@@ -74,12 +84,14 @@ public class StudentImportService {
      * @throws ValidationException       if the file has no data rows at all.
      */
     public int importStudents(InputStream file, Long courseId, Long sectionId, Long adminId) throws IOException {
-        courseDAO.findById(courseId).orElseThrow(() -> new ResourceNotFoundException("Selected course not found."));
+        Course course = courseDAO.findById(courseId).orElseThrow(() -> new ResourceNotFoundException("Selected course not found."));
+        Section section = null;
         if (sectionId != null) {
-            sectionDAO.findById(sectionId).orElseThrow(() -> new ResourceNotFoundException("Selected section not found."));
+            section = sectionDAO.findById(sectionId).orElseThrow(() -> new ResourceNotFoundException("Selected section not found."));
         }
+        final Section finalSection = section;
 
-        List<UserCreateRequest> candidates = new ArrayList<>();
+        List<StudentRow> candidates = new ArrayList<>();
         List<String> rowErrors = new ArrayList<>();
         Set<String> seenRollNos = new HashSet<>();
         Set<String> seenEmails = new HashSet<>();
@@ -114,8 +126,7 @@ public class StudentImportService {
                 } else if (userDAO.existsByEmail(email)) {
                     rowErrors.add(label + ": A user with this email already exists.");
                 } else {
-                    candidates.add(new UserCreateRequest(
-                            UserRole.STUDENT, email, fullName, phone));
+                    candidates.add(new StudentRow(rollNo, fullName, email, phone));
                 }
             }
         }
@@ -130,8 +141,31 @@ public class StudentImportService {
             throw new ValidationException("The uploaded file has no data rows.");
         }
 
-        for (UserCreateRequest req : candidates) {
-            userService.createUser(req, adminId);
+        Session session = HibernateUtil.getCurrentSession();
+        Transaction tx = session.beginTransaction();
+        try {
+            User adminUser = adminId != null ? userDAO.findById(adminId).orElse(null) : null;
+            for (StudentRow req : candidates) {
+                String temporaryPassword = PasswordUtil.generateTemporaryPassword();
+                User user = new User(req.email(), PasswordUtil.hash(temporaryPassword), req.fullName(), UserRole.STUDENT);
+                user.setPhone(req.phone());
+                userDAO.save(user);
+
+                Student student = new Student(user, req.rollNo(), course);
+                student.setCurrentSection(finalSection);
+                studentDAO.save(student);
+
+                if (adminUser != null) {
+                    activityLogService.log(new ActivityLog(adminUser, "STUDENT_IMPORTED",
+                            "Imported student " + req.rollNo() + " (" + req.fullName() + ")", null));
+                }
+            }
+            tx.commit();
+        } catch (RuntimeException e) {
+            if (tx.isActive()) {
+                tx.rollback();
+            }
+            throw e;
         }
         LOGGER.info("Bulk student import: {} student(s) created for course {} (admin {}).",
                 candidates.size(), courseId, adminId);

@@ -21,10 +21,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.intelliresult.nexus.util.GradeUtil;
 
 /**
  * {@code /student/results} - Sec. 18's Student Result Module, deferred
@@ -86,6 +88,23 @@ public class StudentResultServlet extends HttpServlet {
         request.setAttribute("student", student);
         request.setAttribute("resultsByExam", byExam);
         request.setAttribute("summariesByExamId", summariesByExamId);
+
+        BigDecimal cumulativeCgpa = null;
+        List<GradeUtil.WeightedValue> sgpas = new ArrayList<>();
+        for (ResultSummary s : summariesByExamId.values()) {
+            if (s.getCgpa() != null && cumulativeCgpa == null) {
+                cumulativeCgpa = s.getCgpa();
+            }
+            if (s.getSgpa() != null) {
+                BigDecimal cr = s.getTotalCredits() != null && s.getTotalCredits().compareTo(BigDecimal.ZERO) > 0
+                        ? s.getTotalCredits() : BigDecimal.ONE;
+                sgpas.add(new GradeUtil.WeightedValue(s.getSgpa(), cr));
+            }
+        }
+        if (cumulativeCgpa == null) {
+            cumulativeCgpa = GradeUtil.weightedAverage(sgpas).orElse(null);
+        }
+        request.setAttribute("currentCgpa", cumulativeCgpa);
 
         // Upgrade: "add a selector so the student can choose which exam /
         // semester result to view" - byExam is already ordered most-recent-

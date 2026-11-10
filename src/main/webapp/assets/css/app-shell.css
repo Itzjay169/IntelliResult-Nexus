@@ -273,21 +273,45 @@
 }
 
 .panel-empty {
-  padding: var(--space-12) var(--space-4);
+  padding: var(--space-12) var(--space-6);
   text-align: center;
   color: var(--color-ink-soft);
-  font-size: 0.88rem;
+  font-size: 0.92rem;
   line-height: 1.6;
+  background: #FCFCFB;
+  border: 1px dashed var(--color-rule);
+  border-radius: var(--radius-md);
+  margin: var(--space-4) 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .panel-empty::before {
   content: '';
   display: block;
-  width: 40px;
-  height: 40px;
-  margin: 0 auto var(--space-4);
-  border: 1.5px dashed var(--color-rule);
+  width: 48px;
+  height: 48px;
+  margin: 0 auto var(--space-3);
   border-radius: 50%;
+  background: #F1F5F9 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394A3B8' stroke-width='1.75'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z' /%3E%3C/svg%3E") no-repeat center / 24px;
+}
+
+.panel-empty p {
+  margin: 0;
+  max-width: 48ch;
+}
+
+.panel-empty a {
+  color: var(--color-seal);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.panel-empty a:hover {
+  color: var(--color-ink);
 }
 
 .chart-container {
@@ -570,12 +594,19 @@ table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control::before {
 }
 
 .badge {
-  display: inline-block;
-  padding: 0.2rem 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.22rem 0.65rem;
   border-radius: 999px;
   font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.01em;
+  line-height: 1.25;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  vertical-align: middle;
+  border: 1px solid transparent;
+  transition: all 0.15s var(--ease-standard);
 }
 
 /* Plain (non-DataTables-enhanced) tables - the expandable per-student mark
@@ -619,29 +650,54 @@ table:not(.dataTable) tbody tr:hover td {
 .badge-priority-normal { background: var(--color-paper-soft); color: var(--color-ink-soft); }
 .badge-priority-low { background: #EAF3EE; color: var(--color-verified); }
 
-/* Sec. 9/10's workflow-status badges. Restrained to the three tint families
-   .badge-priority-* already established (neutral/brass/verified) rather
-   than inventing a wider palette per status - CREATED hasn't started yet
-   (neutral); SCHEDULED/SUBMISSION/APPROVAL are the three "admin attention
-   in the brass zone" stages a person is actively moving through; ACTIVE/
-   PUBLISHED are both "live and correct" (verified green); LOCKED is the one
-   status worth a visually heavier treatment, since Sec. 10 describes it as
-   immutable under normal operations - solid ink, not a tint. Class names
-   are lowercase exam-status enum values on purpose (badge-status- +
-   fn:toLowerCase(status)) so a JSP never needs a c:choose to pick one. */
-.badge-status { text-transform: uppercase; letter-spacing: 0.03em; }
-.badge-status-created, .badge-status-draft, .badge-status-pending { background: var(--color-paper-soft); color: var(--color-ink-soft); }
-.badge-status-scheduled, .badge-status-submission, .badge-status-approval, .badge-status-submitted, .badge-status-approved { background: #F6EFE3; color: var(--color-seal); }
-.badge-status-active, .badge-status-published, .badge-status-assigned { background: #EAF3EE; color: var(--color-verified); }
-.badge-status-locked { background: var(--color-ink); color: var(--color-paper); }
-/* Upgrade addition: Registration/Forgot-Password's admin queues and
-   Re-evaluation share the PENDING/APPROVED/REJECTED vocabulary already
-   used for exam-adjacent statuses above, but this codebase's original
-   badge-status rules never defined a REJECTED/DECLINED tone - reusing
-   badge-priority-high's own danger pairing (#FBEEEF / --color-danger)
-   keeps "this needs a different kind of attention" visually distinct from
-   the neutral PENDING tone and the positive APPROVED tone. */
-.badge-status-rejected, .badge-status-declined { background: #FBEEEF; color: var(--color-danger); }
+/* Workflow status badges */
+.badge-status { text-transform: uppercase; letter-spacing: 0.04em; }
+
+.badge-status-draft, .badge-draft {
+  background: var(--status-draft-bg, #F1F5F9);
+  color: var(--status-draft-ink, #475569);
+  border-color: var(--status-draft-border, #CBD5E1);
+}
+
+.badge-status-submitted, .badge-submitted,
+.badge-status-submission, .badge-status-approval,
+.badge-status-scheduled {
+  background: var(--status-submitted-bg, #FEF3C7);
+  color: var(--status-submitted-ink, #92400E);
+  border-color: var(--status-submitted-border, #FCD34D);
+}
+
+.badge-status-approved, .badge-approved {
+  background: var(--status-approved-bg, #E0E7FF);
+  color: var(--status-approved-ink, #3730A3);
+  border-color: var(--status-approved-border, #A5B4FC);
+}
+
+.badge-status-published, .badge-published,
+.badge-status-active, .badge-status-assigned {
+  background: var(--status-published-bg, #DCFCE7);
+  color: var(--status-published-ink, #166534);
+  border-color: var(--status-published-border, #86EFAC);
+}
+
+.badge-status-locked, .badge-locked {
+  background: var(--status-locked-bg, #0F172A);
+  color: var(--status-locked-ink, #F8FAFC);
+  border-color: var(--status-locked-border, #020617);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.25);
+}
+
+.badge-status-created, .badge-status-pending, .badge-pending {
+  background: #F8FAFC;
+  color: #64748B;
+  border-color: #E2E8F0;
+}
+
+.badge-status-rejected, .badge-status-declined, .badge-rejected {
+  background: #FEE2E2;
+  color: #991B1B;
+  border-color: #FCA5A5;
+}
 
 /* Horizontal lifecycle stepper (Sec. 9's "display workflow status
    visually"). Each .stepper-step draws its own connector as a ::after line
@@ -769,4 +825,41 @@ table:not(.dataTable) tbody tr:hover td {
   .page-body { padding: var(--space-4); }
   .topbar { padding: var(--space-3) var(--space-4); }
   .mobile-menu-btn { display: inline-flex; }
+  .panel-grid { grid-template-columns: 1fr; }
+  .stat-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .page-body { padding: var(--space-3); }
+  .stat-grid { grid-template-columns: 1fr; gap: var(--space-3); }
+  .panel { padding: var(--space-4); border-radius: var(--radius-sm); }
+  .topbar { flex-direction: column; align-items: flex-start; gap: var(--space-2); }
+  .topbar-title { font-size: 1.2rem; }
+  
+  .table-scroll {
+    margin-left: calc(-1 * var(--space-4));
+    margin-right: calc(-1 * var(--space-4));
+    width: calc(100% + var(--space-8));
+    padding: 0 var(--space-4);
+    box-sizing: border-box;
+  }
+  
+  .btn-primary, .btn-secondary {
+    width: 100%;
+    margin-bottom: var(--space-2);
+  }
+
+  .dataTables_wrapper .dataTables_filter,
+  .dataTables_wrapper .dataTables_length {
+    float: none !important;
+    text-align: left !important;
+    margin-bottom: var(--space-2);
+  }
+
+  .dataTables_wrapper .dataTables_filter input {
+    width: 100%;
+    margin-left: 0;
+    margin-top: 4px;
+    box-sizing: border-box;
+  }
 }

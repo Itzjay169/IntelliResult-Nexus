@@ -29,6 +29,7 @@
             <div class="panel-empty"><p>No students yet. New students appear here once their public Registration is approved from the <a href="${ctx}/admin/registrations">Registrations</a> queue.</p></div>
         </c:when>
         <c:otherwise>
+    <div class="table-scroll">
     <table id="studentsTable" class="display" style="width:100%">
         <thead>
         <tr>
@@ -86,6 +87,7 @@
         </c:forEach>
         </tbody>
     </table>
+    </div>
         </c:otherwise>
     </c:choose>
 </div>

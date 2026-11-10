@@ -27,6 +27,13 @@ public class TeacherSubjectDAOImpl extends AbstractDAO<TeacherSubject, Long> imp
     }
 
     @Override
+    public List<TeacherSubject> findActiveBySemester(Long semesterId) {
+        return namedQuery("FROM TeacherSubject ts WHERE (ts.section.semester.id = :semesterId OR ts.subject.semester.id = :semesterId) AND ts.unassignedAt IS NULL")
+                .setParameter("semesterId", semesterId)
+                .getResultList();
+    }
+
+    @Override
     public Optional<TeacherSubject> findActiveAssignment(Long teacherId, Long subjectId, Long sectionId) {
         return namedQuery("FROM TeacherSubject WHERE teacher.id = :teacherId AND subject.id = :subjectId "
                         + "AND section.id = :sectionId AND unassignedAt IS NULL")

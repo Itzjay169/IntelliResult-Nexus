@@ -12,37 +12,21 @@
     <c:remove var="flashError" scope="session"/>
 </c:if>
 
-<%-- Same CDN set as admin-foot.jspf, deliberately kept as a separate file
-     rather than sharing/renaming that one: admin-foot.jspf is <%@ include
-     %>d directly by 26 existing admin JSPs (a literal per-file path, not an
-     indirection any rename could apply once), so consolidating it would
-     mean touching every one of them for a pure naming nicety - a real risk
-     to already-verified files for no functional gain. app-shell.css was a
-     different, lower-risk call: exactly one file (admin-head.jspf)
-     referenced it by name. Content is identical today because both roles
-     need the same libraries today; that's convergence, not the two roles
-     being forced to share one file, and either can diverge without
-     touching the other. --%>
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/responsive/3.0.8/js/dataTables.responsive.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/js/toastr.min.js"></script>
-<link rel="stylesheet" href="https://cdn.datatables.net/2.1.8/css/dataTables.dataTables.min.css">
-<link rel="stylesheet" href="https://cdn.datatables.net/responsive/3.0.8/css/responsive.dataTables.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/css/toastr.min.css">
-
 <script>
-  $.fn.dataTable.defaults.responsive = true;
-
   document.addEventListener('submit', function (e) {
     if (e.defaultPrevented) { return; }
-    var submitBtn = e.target.querySelector('button[type="submit"]:not([disabled])');
+    var submitBtn = e.target.querySelector('button[type="submit"]:not([disabled]), input[type="submit"]:not([disabled])');
     if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.dataset.originalText = submitBtn.textContent;
-      submitBtn.textContent = 'Processing\u2026';
+      setTimeout(function () {
+        submitBtn.disabled = true;
+      }, 0);
+      if (submitBtn.tagName === 'INPUT') {
+        submitBtn.dataset.originalText = submitBtn.value;
+        submitBtn.value = 'Processing\u2026';
+      } else {
+        submitBtn.dataset.originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Processing\u2026';
+      }
     }
   });
 
@@ -55,9 +39,15 @@
 
   (function () {
     var successEl = document.getElementById('flashSuccessData');
-    if (successEl) { toastr.success(successEl.dataset.message); }
+    if (successEl) {
+      if (typeof toastr !== 'undefined') { toastr.success(successEl.dataset.message); }
+      else { console.log('SUCCESS:', successEl.dataset.message); }
+    }
     var errorEl = document.getElementById('flashErrorData');
-    if (errorEl) { toastr.error(errorEl.dataset.message); }
+    if (errorEl) {
+      if (typeof toastr !== 'undefined') { toastr.error(errorEl.dataset.message); }
+      else { console.error('ERROR:', errorEl.dataset.message); }
+    }
   })();
 </script>
 </body>

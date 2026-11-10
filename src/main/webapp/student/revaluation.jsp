@@ -44,6 +44,7 @@
             <p class="panel-empty">You haven't submitted any re-evaluation requests yet.</p>
         </c:when>
         <c:otherwise>
+            <div class="table-scroll">
             <table id="requestsTable" class="display" style="width:100%">
                 <thead>
                 <tr><th>Exam</th><th>Subject</th><th>Reason</th><th>Status</th><th>Evaluator</th><th>Report</th><th>Requested</th></tr>
@@ -69,6 +70,7 @@
                 </c:forEach>
                 </tbody>
             </table>
+            </div>
         </c:otherwise>
     </c:choose>
 </div>

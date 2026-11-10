@@ -132,7 +132,16 @@ public class Subject extends SoftDeletableEntity {
         this.internalPassingMarks = null;
     }
 
-    /** Database-computed; there is no setter on purpose - see the class-level note on @Generated. */
-    public BigDecimal getTotalMaxMarks() { return totalMaxMarks; }
+    /** Database-computed; fallback for in-memory/H2 where GENERATED ALWAYS AS is not evaluated. */
+    public BigDecimal getTotalMaxMarks() {
+        if (totalMaxMarks != null) {
+            return totalMaxMarks;
+        }
+        BigDecimal computed = BigDecimal.ZERO;
+        if (theoryMaxMarks != null) computed = computed.add(theoryMaxMarks);
+        if (practicalMaxMarks != null) computed = computed.add(practicalMaxMarks);
+        if (internalMaxMarks != null) computed = computed.add(internalMaxMarks);
+        return computed.compareTo(BigDecimal.ZERO) == 0 ? null : computed;
+    }
 }
 

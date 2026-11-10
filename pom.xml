@@ -62,7 +62,6 @@
 
         <!-- Testing -->
         <junit.version>5.11.3</junit.version>
-        <mockito.version>5.14.2</mockito.version>
         <h2.version>2.3.232</h2.version>
     </properties>
 
@@ -210,23 +209,11 @@
             <version>${jackson.version}</version>
         </dependency>
 
-        <!-- ================= TESTING (Phase 17, wired now so Phase 3 DAOs are testable immediately) ================= -->
+        <!-- ================= TESTING (Phase 17: JUnit 5 + real in-memory H2, no mocks) ================= -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <version>${junit.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
-            <version>${mockito.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-junit-jupiter</artifactId>
-            <version>${mockito.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -262,6 +249,13 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.1</version>
+                <configuration>
+                    <environmentVariables>
+                        <INTELLIRESULT_DB_URL></INTELLIRESULT_DB_URL>
+                        <INTELLIRESULT_DB_USERNAME></INTELLIRESULT_DB_USERNAME>
+                        <INTELLIRESULT_DB_PASSWORD></INTELLIRESULT_DB_PASSWORD>
+                    </environmentVariables>
+                </configuration>
             </plugin>
         </plugins>
     </build>

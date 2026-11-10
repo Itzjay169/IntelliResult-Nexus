@@ -1,13 +1,12 @@
 package com.intelliresult.nexus.controller;
 
-import com.intelliresult.nexus.dao.ActivityLogDAO;
-import com.intelliresult.nexus.dao.ActivityLogDAOImpl;
 import com.intelliresult.nexus.dao.TeacherDAO;
 import com.intelliresult.nexus.dao.TeacherDAOImpl;
 import com.intelliresult.nexus.entity.ActivityLog;
 import com.intelliresult.nexus.entity.Teacher;
 import com.intelliresult.nexus.entity.User;
 import com.intelliresult.nexus.exception.BaseApplicationException;
+import com.intelliresult.nexus.service.ActivityLogService;
 import com.intelliresult.nexus.service.MarksEntryService;
 import com.intelliresult.nexus.service.ReportService;
 import com.intelliresult.nexus.service.SystemSettingsService;
@@ -54,7 +53,7 @@ public class TeacherReportServlet extends HttpServlet {
     private final MarksEntryService marksEntryService = new MarksEntryService();
     private final ReportService reportService = new ReportService();
     private final SystemSettingsService systemSettingsService = new SystemSettingsService();
-    private final ActivityLogDAO activityLogDAO = new ActivityLogDAOImpl();
+    private final ActivityLogService activityLogService = new ActivityLogService();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -105,7 +104,7 @@ public class TeacherReportServlet extends HttpServlet {
 
     private void logAndStream(HttpServletRequest request, HttpServletResponse response, User currentUser,
                                ReportData data, byte[] content, String contentType, String extension) throws IOException {
-        activityLogDAO.save(new ActivityLog(currentUser, "REPORT_GENERATED",
+        activityLogService.log(new ActivityLog(currentUser, "REPORT_GENERATED",
                 data.title() + " - " + data.subtitle() + " (" + extension.toUpperCase() + ")", request.getRemoteAddr()));
 
         String filename = data.title().toLowerCase().replaceAll("[^a-z0-9]+", "_")

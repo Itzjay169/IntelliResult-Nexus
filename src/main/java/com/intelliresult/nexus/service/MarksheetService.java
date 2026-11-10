@@ -22,6 +22,7 @@ import com.intelliresult.nexus.exception.ResourceNotFoundException;
 import com.intelliresult.nexus.exception.ResultProcessingException;
 import com.intelliresult.nexus.service.dto.MarksheetData;
 import com.intelliresult.nexus.service.dto.MarksheetSubjectRow;
+import com.intelliresult.nexus.util.GradeUtil;
 import com.intelliresult.nexus.util.PDFUtil;
 import com.intelliresult.nexus.util.QRCodeUtil;
 import com.lowagie.text.DocumentException;
@@ -29,7 +30,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -120,6 +123,20 @@ public class MarksheetService {
 
         Section section = student.getCurrentSection();
 
+        BigDecimal cgpa = summary.getCgpa();
+        if (cgpa == null) {
+            List<ResultSummary> allSummaries = resultSummaryDAO.findAllForStudent(studentId);
+            List<GradeUtil.WeightedValue> sgpas = new ArrayList<>();
+            for (ResultSummary s : allSummaries) {
+                if (s.getSgpa() != null) {
+                    BigDecimal cr = s.getTotalCredits() != null && s.getTotalCredits().compareTo(BigDecimal.ZERO) > 0
+                            ? s.getTotalCredits() : BigDecimal.ONE;
+                    sgpas.add(new GradeUtil.WeightedValue(s.getSgpa(), cr));
+                }
+            }
+            cgpa = GradeUtil.weightedAverage(sgpas).orElse(summary.getSgpa());
+        }
+
         try {
             byte[] qrPng = QRCodeUtil.generatePngBytes(verificationUrl, QR_SOURCE_SIZE_PX);
 
@@ -135,7 +152,7 @@ public class MarksheetService {
                     exam.getStartTime().toLocalDate(), exam.getEndTime().toLocalDate(),
                     subjectRows,
                     summary.getTotalObtainedMarks(), summary.getTotalMaxMarks(), summary.getOverallPercentage(),
-                    summary.getOverallGrade(), summary.getSgpa(), summary.getCgpa(), summary.isPass(),
+                    summary.getOverallGrade(), summary.getSgpa(), cgpa, summary.isPass(),
                     summary.getClassRank(), summary.getOverallRank(),
                     resultStatusLabel,
                     token, qrPng, verificationUrl,

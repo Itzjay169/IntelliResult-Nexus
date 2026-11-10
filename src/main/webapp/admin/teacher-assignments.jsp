@@ -86,6 +86,7 @@
             <div class="panel-empty">No teacher assignments yet.</div>
         </c:when>
         <c:otherwise>
+            <div class="table-scroll">
             <table id="activeTable" class="display" style="width:100%">
                 <thead><tr><th>Teacher</th><th>Subject</th><th>Section</th><th>Timing</th><th>Assigned</th><th></th></tr></thead>
                 <tbody>
@@ -107,6 +108,7 @@
                 </c:forEach>
                 </tbody>
             </table>
+            </div>
         </c:otherwise>
     </c:choose>
 </div>

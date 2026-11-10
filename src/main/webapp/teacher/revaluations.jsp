@@ -22,6 +22,7 @@
             <div class="panel-empty"><p>Nothing assigned to you right now.</p></div>
         </c:when>
         <c:otherwise>
+            <div class="table-scroll">
             <table class="display" style="width:100%">
                 <thead><tr><th>Student</th><th>Exam</th><th>Subject</th><th>Reason</th><th>Assigned</th><th></th></tr></thead>
                 <tbody>
@@ -37,6 +38,7 @@
                 </c:forEach>
                 </tbody>
             </table>
+            </div>
         </c:otherwise>
     </c:choose>
 </div>
@@ -48,6 +50,7 @@
             <div class="panel-empty"><p>You haven't resolved any re-evaluation requests yet.</p></div>
         </c:when>
         <c:otherwise>
+            <div class="table-scroll">
             <table class="display" style="width:100%">
                 <thead><tr><th>Student</th><th>Exam</th><th>Subject</th><th>Outcome</th><th>Resolved</th></tr></thead>
                 <tbody>
@@ -62,6 +65,7 @@
                 </c:forEach>
                 </tbody>
             </table>
+            </div>
         </c:otherwise>
     </c:choose>
 </div>

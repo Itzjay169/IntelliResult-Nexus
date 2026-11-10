@@ -20,6 +20,7 @@
             <div class="panel-empty"><p>No admin accounts found.</p></div>
         </c:when>
         <c:otherwise>
+    <div class="table-scroll">
     <table id="usersTable" class="display" style="width:100%">
         <thead>
         <tr>
@@ -59,6 +60,7 @@
         </c:forEach>
         </tbody>
     </table>
+    </div>
         </c:otherwise>
     </c:choose>
 </div>

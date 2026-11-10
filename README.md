@@ -1,255 +1,361 @@
 # IntelliResult Nexus
 
-**Intelligent Academic Result, Performance Analytics & Verification ERP**
+A web-based Student Result Management System built with Java, Jakarta EE, Hibernate, MySQL, and JSP.
 
-A layered, enterprise-style academic result-processing and performance-analytics
-platform: `JSP → Servlet Controller → Service → DAO → Hibernate Entity → MySQL`.
+## Overview
 
-> **Status: Phase 16 of 18 (Polish) - complete.**
-> An audit-and-fix phase, not a new feature: the most significant finding
-> was that `toggleSidebar()` had been defined in every `*-foot.jspf` since
-> its own respective phase but never actually invoked anywhere - no
-> button existed, meaning the mobile navigation Sec. 43 requires had been
-> silently broken since it was first written. Fixed with one hamburger
-> button per topbar. Also closed: `index.jsp` was still Phase 1's raw
-> placeholder despite its own comment promising a Phase 4 redirect;
-> `error-404.jsp`/`error-500.jsp` were still inline-styled placeholders;
-> `error-500.jsp`'s own comment named unfinished exception-logging work,
-> now wired up via this codebase's one deliberate, narrowly-scoped
-> scriptlet; none of ~20 DataTables initializations had `responsive: true`
-> set, fixed once via a global default rather than twenty edits. Plus a
-> skip-link, `:focus-visible`, global submit-loading states, and a
-> horizontal-scroll utility for wide tables. Zero controller/service/DAO/
-> entity changes - JSP/CSS/JS only.
-> See [Phase Progress](#phase-progress).
+IntelliResult Nexus is an enterprise academic result, examination, and student performance management system designed for colleges and universities. It centralizes and automates the entire academic lifecycle:
+- **Academic Hierarchy:** Departments, courses, academic years, semesters, sections, and subjects.
+- **Examination Management:** Scheduling, examination type management, and status lifecycle transitions.
+- **Marks Processing:** Teacher marks entry (theory, practical, internal), draft saving, submission, and validation.
+- **Automated Result Calculation:** Instant computation of totals, percentages, letter grades, grade points, SGPA, CGPA, class ranks, and pass/fail standing.
+- **Verification & Marksheets:** Tamper-evident PDF marksheets with ZXing QR code verification for external validation.
+- **Analytics & Notifications:** In-app alerts for scheduled exams and published results, accompanied by comparative performance analytics.
 
-## Tech Stack
+The platform provides tailored workspaces for three core user groups: **Administrators**, **Teachers**, and **Students**.
 
-| Layer | Choice | Version |
-|---|---|---|
-| Language | Java | 17 (LTS) |
-| Web platform | Jakarta EE 11 (Servlet 6.1 / JSP 4.0) | — |
-| Servlet container | Apache Tomcat | 11.0.x |
-| ORM | Hibernate ORM | 7.4.5.Final |
-| Database | MySQL | 8.0 / 8.4+ |
-| Connection pool | HikariCP | 7.1.0 |
-| Build | Maven | 3.9+ |
-| Logging | Log4j2 | 2.26.0 |
-| Password hashing | jBCrypt | 0.4 |
-| Error tracking | Sentry Java SDK | 8.28.0 |
-| Excel import/export | Apache POI | 5.5.1 |
-| PDF marksheets | OpenPDF (LGPL/MPL) | 3.0.5 |
-| QR verification | ZXing | 3.5.4 |
-| Email | Jakarta Mail + Angus Mail | 2.1.5 / 2.0.3 |
+---
 
-See `docs/architecture/PHASE1-FOUNDATION.md` for the reasoning behind each
-infrastructure deviation from the original spec (Jakarta EE namespace,
-OpenPDF vs iText 5, HikariCP, package naming),
-`docs/architecture/PHASE2-DATABASE.md` for the schema decisions (Courses/
-Semesters as first-class tables, subject component flags, why several
-multi-row rules live in the Service layer rather than as constraints), and
-`docs/architecture/PHASE3-ENTITY-DAO.md` for the entity/DAO layer (mapped
-superclass hierarchy, proxy-safe equals/hashCode, why relationships are
-unidirectional, the generic DAO pattern), and
-`docs/architecture/PHASE4-SECURITY.md` for authentication/authorization
-(why filters are registered in web.xml instead of via @WebFilter, session
-fixation protection, the CSRF token pattern, open-redirect protection),
-`docs/architecture/PHASE5A-ADMIN-DASHBOARD.md` for the admin shell/dashboard
-(why Phase 5 is split into sub-deliveries, the EL/Java-record verification
-catch, dashboard aggregate query design),
-`docs/architecture/PHASE5B-USER-MANAGEMENT.md` for user management (why
-role is immutable after creation, the temporary-password flash pattern),
-and `docs/architecture/PHASE5C-ACADEMIC-SETUP.md` for academic setup (a
-real fmt:formatDate/LocalDate bug caught before shipping, why AcademicYear
-and Semester have no delete action), and
-`docs/architecture/PHASE5D-SUBJECTS-ASSIGNMENTS.md` for subjects and
-teacher assignments (a real 7-controller flash-message bug found and fixed),
-and `docs/architecture/PHASE5E-EXAM-GRADING.md` for exam management and
-grading rules (two real bugs found and fixed - a missing-CSS-import gap
-affecting 15 admin forms, and a missing-interface-method gap that would
-have failed to compile in 5 controllers, the second one confirmed via an
-actual scoped `javac` build, not just inspection - plus the
-lifecycle-stepper EL-safety choices and why grading-rule uniqueness is
-checked beyond what the spec literally asks for), and
-`docs/architecture/PHASE5F-NOTICES-SETTINGS.md` for notices and system
-settings (why System Settings is a genuine singleton table rather than a
-generic key-value store, why five specific EL constructs were deliberately
-pushed into servlet code instead - one of them a real, silent,
-would-never-have-worked bug caught before it shipped, not a hypothetical
-one - and exactly which Sec. 52 settings were left out and why), and
-`docs/architecture/PHASE6A-TEACHER-DASHBOARD.md` for the start of the
-Teacher module (why `Result.applyCalculatedScore()` staying untouched
-isn't a gap but a boundary the entity itself already drew in Phase 3; a
-third real pre-existing bug found and fixed - `ResultDAO.java` had never
-actually compiled, missing three imports its own method signatures needed,
-undetected since Phase 3 until this phase was the first to stage `Result`
-into an actual build; and why My Classes/My Subjects are two sorted tables
-over one dataset rather than a grouped view), and
-`docs/architecture/PHASE6B-MARKS-ENTRY.md` for Marks Entry itself (why
-Save Draft and Submit are one form rather than a forced two-step flow; why
-validation is all-or-nothing across the whole grid rather than silently
-skipping problem rows; a real `\u00b7`-is-not-JSP-syntax mistake caught
-before it shipped, and why the fix wasn't an HTML entity either, which
-`<c:out>` would have double-escaped; and why one exam-status gate wasn't
-enough - Submitted Results needed a second, more permissive one just to
-be reachable for its own purpose).
+## Features
 
-## Prerequisites
+- **Role-Based Authentication & Authorization:** Multi-role access control (Admin, Teacher, Student) with BCrypt password hashing, session fixation protection, and CSRF defense.
+- **Academic Structure Management:** Full administration of departments, degree courses, academic years, semesters, class sections, subjects, and teacher subject assignments.
+- **Examination Lifecycle:** Create and advance exams through distinct phases: *DRAFT*, *SCHEDULED*, *ACTIVE*, *SUBMISSION*, *UNDER_REVIEW*, *PUBLISHED*, and *LOCKED*.
+- **Teacher Marks Entry:** Two-step workflow enabling teachers to enter marks for theory, practical, and internal components, save drafts, and submit finalized marks for approval.
+- **Result Approval & Publication Engine:** Admin review workflow with bulk publishing, bulk locking, and result correction capabilities backed by audit history.
+- **Automated Result Computation:** Centralized evaluation engine calculating subject totals, component percentages, grade points, SGPA, cumulative CGPA, section class ranks, and cohort-wide ranks.
+- **Comparative Performance Analytics:** Visual performance trends, class-average comparisons, section topper comparisons, and strength/weakness diagnostics using Chart.js.
+- **QR-Verifiable PDF Marksheets:** Automated generation of official PDF marksheets with student details, component breakdown, SGPA, CGPA, institutional branding, authorized signature lines, and dynamic verification QR codes.
+- **Public Verification Portal:** Public verification route (`/verify/result/{token}`) allowing employers and external parties to authenticate marksheet credentials against institutional records.
+- **In-App Notification Engine:** Real-time event notifications for students and teachers upon exam scheduling, status changes, and result publications.
+- **Revaluation System:** Student-initiated revaluation requests with administrative review, approval/rejection workflows, and automated result re-calculation.
+- **Institutional Notices:** Broadcast notices for students, faculty, or the entire campus community.
+- **Recycle Bin & Soft Deletion:** Safeguards against accidental data loss with soft deletion and restoration for academic entities.
+- **Excel Bulk Processing:** Import students and batch-import/export teacher marks via Apache POI spreadsheets.
 
-- JDK 17+
-- Maven 3.9+
-- MySQL 8.0+ running locally (or reachable) with a database created for this app
-- Apache Tomcat 11.0.x (for actually running the WAR - `mvn compile`/`mvn test`
-  don't need it)
+---
 
-## Setup
+## Technology Stack
 
-1. **Create the database, app user, and schema:**
-   ```sql
-   CREATE DATABASE intelliresult_nexus CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
-   CREATE USER 'intelliresult_app'@'localhost' IDENTIFIED BY 'your-local-password';
-   GRANT ALL PRIVILEGES ON intelliresult_nexus.* TO 'intelliresult_app'@'localhost';
-   ```
-   ```bash
-   mysql -u root intelliresult_nexus < src/main/resources/db/schema.sql
-   mysql -u root intelliresult_nexus < src/main/resources/db/seed-data.sql   # creates the one bootstrap Admin account - required, not demo data
-   ```
-   Both files were executed against a real MySQL 8.0.46 instance while being
-   built - not just visually reviewed - including deliberately trying to
-   insert invalid data to confirm the constraints actually reject it. See
-   `docs/architecture/PHASE2-DATABASE.md` for exactly what was tested.
-   `seed-data.sql` creates exactly one row: the first Admin login. There is
-   no sample department/course/student/teacher/exam data of any kind -
-   everything else (your institution's real departments, courses,
-   semesters, sections, subjects, grading scale, and every Student/Teacher
-   account) is created after logging in, either directly by the Admin
-   under Academic Setup, or by real people registering themselves at
-   `/register` for the Admin to verify. **Change the bootstrap Admin's
-   password immediately after your first login.**
+- **Java 17:** Core programming language utilizing modern records, pattern matching, and sealed types.
+- **Jakarta EE 11 / Jakarta Servlet 6.1:** Core servlet specification running on modern Jakarta namespaces.
+- **JSP 3.1 & JSTL 3.0:** Server-side templating with componentized header/footer layout fragments.
+- **Hibernate ORM 7.4.5.Final:** Object-relational mapping using Jakarta Persistence annotations and ManagedSessionContext.
+- **MySQL 8.0+:** Relational database with window functions (`RANK() OVER`), generated columns, and foreign keys.
+- **HikariCP 7.1.0:** High-performance JDBC connection pooling.
+- **Apache Tomcat 11.0.x:** Jakarta EE servlet container and HTTP web server.
+- **OpenPDF 2.2.5:** Vector PDF document generation for official student marksheets.
+- **ZXing 3.5.4:** QR code matrix generation for marksheet verification.
+- **Apache POI 5.5.1:** Microsoft Excel (.xlsx) parsing and generation for bulk data operations.
+- **Chart.js:** Responsive client-side data visualizations for performance analytics and dashboards.
+- **Log4j2 2.26.0:** High-performance asynchronous application logging.
+- **jBCrypt 0.4:** Secure salted password hashing.
+- **Sentry Java SDK 8.28.0:** Optional real-time application error tracking and performance monitoring.
 
-2. **Set the required environment variable** (there is no default password -
-   this is deliberate; see `AppConfig.java`):
-   ```bash
-   export INTELLIRESULT_DB_PASSWORD=your-local-password
-   ```
-   Everything else in `application.properties` has a working local-dev default.
-   To point at a different DB/user, or to enable Sentry, override the
-   matching key, e.g. `INTELLIRESULT_DB_URL`, `INTELLIRESULT_SENTRY_DSN`
-   (see `application.properties` for the full list and the naming rule).
-
-3. **Build:**
-   ```bash
-   mvn clean compile
-   ```
-   > This project was built in a sandboxed environment without outbound
-   > access to Maven Central, so this exact command has **not** been executed
-   > against a live repository here. Every dependency coordinate and version
-   > in `pom.xml` was verified against Maven Central / the project's own
-   > release pages, and every `.xml`/`.java` file was checked for
-   > well-formedness, but running `mvn clean compile` yourself is the first
-   > real build verification this project will get - please do that before
-   > relying on it.
-
-4. **Run the tests:**
-   ```bash
-   mvn test
-   ```
-   Phase 1 only has unit tests for the pure, dependency-free utility classes
-   (`ValidationUtil`, `DateUtil`, `AppConfig`). Meaningful integration,
-   workflow, and security tests need entities and services that don't exist
-   until later phases - Phase 17 is where the full suite described in the
-   spec (auth, authorization, workflow, re-evaluation, import, PDF, security)
-   gets built.
-
-5. **Package and deploy:**
-   ```bash
-   mvn clean package
-   # copy target/intelliresult-nexus.war to Tomcat 11's webapps/ directory
-   ```
-   With no entities yet, a successful deploy means: Tomcat starts, Log4j2
-   initializes, Sentry initializes (or logs that it's disabled, if no DSN is
-   set), Hibernate builds an (empty) SessionFactory against your MySQL
-   instance, and `http://localhost:8080/intelliresult-nexus/` renders the
-   Phase 1 placeholder page.
+---
 
 ## Project Structure
 
-```
+```text
 IntelliResult-Nexus/
 ├── pom.xml
-├── src/main/java/com/intelliresult/nexus/
-│   ├── config/       AppConfig, HibernateUtil          (Phase 1)
-│   ├── listener/      ApplicationStartupListener        (Phase 1)
-│   ├── filter/        HibernateSessionFilter, AuthenticationFilter, AuthorizationFilter, CsrfFilter (Phase 1 + 4; AuthenticationFilter gained the unreadNotificationCount request attribute in Phase 14)
-│   ├── exception/     Exception hierarchy                (Phase 1)
-│   ├── util/           DateUtil, ValidationUtil, PasswordUtil, SecurityUtil, AppConstants, NavigationUtil (Phase 1 + 4), GradeUtil (Phase 7), PDFUtil + QRCodeUtil (Phase 12), ExcelUtil (Phase 13)
-│   ├── entity/         21 entities (verified by script against hibernate.cfg.xml in Phase 14 - corrects "20", this file's own stated count since Phase 3) + 4 mapped superclasses + enums/ + converter/  (Phase 3; ResultSummary added Phase 7, MarksheetVerification added Phase 12)
-│   ├── dao/             GenericDAO/AbstractDAO + 21 DAO interfaces + implementations (Phase 3; ResultSummaryDAO added Phase 7, ResultDAO gained methods in Phases 7/10/11, ResultSummaryDAO gained comparison queries in Phase 11, MarksheetVerificationDAO added Phase 12, NotificationDAO gained countUnreadByUser in Phase 14, ResultSummaryDAO gained findByExamAndSection in Phase 15)
-│   ├── service/        AuthenticationService (Phase 4), DashboardService + UserService (Phase 5a/5b), AcademicSetupService (Phase 5c), SubjectService + TeacherAssignmentService (Phase 5d), ExamService + GradingRuleService (Phase 5e), NoticeService + SystemSettingsService (Phase 5f), TeacherDashboardService (Phase 6a), MarksEntryService (Phase 6b), ResultCalculationService (Phase 7), ResultService (Phase 8; gained correctResult in Phase 9, refactored for composability in Phase 10), RevaluationService (Phase 10), StudentAnalyticsService (Phase 11), VerificationService + MarksheetService (Phase 12), StudentImportService + MarksImportService (Phase 13), NotificationService + EmailNotificationService (Phase 14, turning on the Notification entity/DAO and Mail config both dormant since Phase 3/1), ReportService + ReportType (Phase 15, mapping all six Sec. 33 report types into one ReportData shape)
-│   └── controller/     LoginServlet, LogoutServlet, PasswordChangeServlet (Phase 4), AdminDashboardServlet + 6 user-management servlets (Phase 5a/5b), 6 academic-setup servlets (Phase 5c), SubjectServlet + TeacherAssignmentServlet (Phase 5d), ExamServlet + GradingRuleServlet (Phase 5e), NoticeServlet + SystemSettingsServlet (Phase 5f; NoticeServlet gained the audience-notify hook in Phase 14), TeacherDashboardServlet + TeacherClassesServlet + TeacherExamsServlet (Phase 6a), MarksEntryServlet + TeacherResultsServlet + TeacherActivityServlet (Phase 6b), ResultApprovalServlet (Phase 8; gained bulk-publish/bulk-lock in Phase 13, gained the student-notify hook in Phase 14), ResultServlet (Phase 9), StudentDashboardServlet (Phase 10, rewritten Phase 11) + StudentRevaluationServlet + AdminRevaluationServlet (Phase 10; gained the student-notify hook in Phase 14), StudentResultServlet + StudentAnalysisServlet (Phase 11), MarksheetServlet + MarksheetDownloadServlet + VerificationServlet (Phase 12), StudentImportServlet + MarksImportServlet (Phase 13), NotificationServlet (Phase 14), ReportServlet + TeacherReportServlet (Phase 15)
-├── src/main/resources/
-│   ├── hibernate.cfg.xml   (Phase 1; SystemSetting + MarksheetVerification mappings fixed in Phase 14 - see that phase's doc)
-│   ├── log4j2.xml
-│   ├── application.properties
-│   └── db/
-│       ├── schema.sql        21 tables, all FKs/checks/indexes    (Phase 2; system_settings added Phase 5f, result_summaries added Phase 7, marksheet_verifications added Phase 12; zero schema changes in Phase 13)
-│       └── seed-data.sql     one bootstrap Admin account only - see file header for why nothing else is pre-seeded
-├── src/main/webapp/
-│   ├── WEB-INF/web.xml
-│   ├── index.jsp, common/error-{404,500}.jsp   (Phase 1 placeholders; replaced with real role-aware pages in Phase 16, closing a gap Phase 4 had left open despite its own comment saying otherwise)
-│   ├── common/login.jsp, change-password.jsp, access-denied.jsp   (Phase 4 - real, permanent pages), report-view.jsp (Phase 15 - shared print layout for both admin/reports and teacher/reports)
-│   ├── common/fragments/ - admin-head/foot.jspf (Phase 5a), teacher-head/foot.jspf (Phase 6a), student-head/foot.jspf (Phase 10, nav extended Phase 11 + Phase 12 + Phase 14 - see PHASE6A doc for why this pair-per-role pattern isn't shared despite near-identical content); all three *-foot.jspf gained a shared flash-message renderer in Phase 14 and, in Phase 16, DataTables Responsive + a global submit-loading-state handler; all three *-head.jspf gained a skip-link and the mobile menu button toggleSidebar() had been missing since it was first written
-│   ├── common/report-view.jsp - table wrapped in `.table-scroll` in Phase 16
-│   ├── assets/css/tokens.css, auth.css (Phase 4, `.verify-*` public-page rules appended Phase 12), app-shell.css (Phase 5a, renamed from admin-shell.css in Phase 6a once Teacher needed the same role-agnostic selectors; `.nav-badge` added Phase 14, `.mobile-menu-btn` added Phase 16); tokens.css gained `:focus-visible`, `.skip-link`, `.table-scroll` in Phase 16
-│   ├── admin/ - dashboard, users, academic-setup, subjects, teacher-assignments, exams, grading-rules, notices, settings, approvals, results, result-history, revaluations, revaluation-resolve, student-import, notifications, reports (34 pages; Phase 5a-5f + Phase 8-10 + Phase 13-15)
-│   ├── teacher/ - dashboard, my-classes, my-subjects, exams, marks-entry (select+grid), draft-results, submitted-results, activity, marks-import (10 pages; Phase 6a-6b + Phase 13; no dedicated Teacher reports page - the two report links on marks-entry-select.jsp open the shared common/report-view.jsp directly)
-│   ├── student/ - dashboard (Phase 10, rewritten Phase 11), results, analysis (Phase 11), revaluation (Phase 10), marksheet (Phase 12), notifications (Phase 14) - 6 pages
-│   └── verify/ - result.jsp (Phase 12) - this project's first public, unauthenticated page other than login
-├── src/test/java/...                                              (utility unit tests only - GradeUtilTest added Phase 7, QRCodeUtilTest added Phase 12, ExcelUtilTest added Phase 13; no new tests in Phase 14/15 - NotificationService/EmailNotificationService/ReportService are all Hibernate-backed like every other service, deferred to Phase 17 with the rest)
-└── docs/architecture/PHASE1-FOUNDATION.md, ..., PHASE16-POLISH.md
+├── README.md
+├── brain.md
+├── src/
+│   ├── main/
+│   │   ├── java/
+│   │   │   └── com/intelliresult/nexus/
+│   │   │       ├── config/          # HibernateUtil, AppConfig
+│   │   │       ├── controller/      # HTTP Servlets (Admin, Teacher, Student)
+│   │   │       ├── dao/             # Data Access Objects and Hibernate implementations
+│   │   │       ├── entity/          # JPA Entities and Mappings
+│   │   │       ├── filter/          # HibernateSession, Auth, Authorization, CSRF
+│   │   │       ├── listener/        # AppLifecycleListener (bootstrap & cleanup)
+│   │   │       ├── service/         # Business logic, transactions, calculation engines
+│   │   │       └── util/            # PDFUtil, QRCodeUtil, ExcelUtil, GradeUtil
+│   │   ├── resources/
+│   │   │   ├── application.properties
+│   │   │   ├── hibernate.cfg.xml
+│   │   │   ├── log4j2.xml
+│   │   │   └── db/
+│   │   │       ├── schema.sql       # Full DDL schema (24 tables)
+│   │   │       └── seed-data.sql    # Optional demo data and seed users
+│   │   └── webapp/
+│   │       ├── admin/               # Admin management and dashboard JSPs
+│   │       ├── teacher/             # Teacher marks-entry and dashboard JSPs
+│   │       ├── student/             # Student dashboard, results, and analysis JSPs
+│   │       ├── common/              # Shared error pages, access denied, layout fragments
+│   │       ├── assets/              # CSS tokens, application shell styles, branding icons
+│   │       └── WEB-INF/
+│   │           └── web.xml          # Filter chain ordering and webapp configuration
+│   └── test/
+│       ├── java/                    # Automated integration and unit tests
+│       └── resources/               # Test configuration (H2 in-memory profile)
 ```
 
-## Phase Progress
+---
 
-- [x] Phase 1 - Foundation
-- [x] Phase 2 - Database schema, relationships, indexes, seed data
-- [x] Phase 3 - Entity + DAO: 18 Hibernate entities, generic + specific DAOs
-- [x] Phase 4 - Security: BCrypt, login/logout/password change, auth + authz filters, session fixation protection, CSRF
-- [x] Phase 5a - Admin: Shell + Dashboard: sidebar/topbar shell, live stats + Chart.js charts from real seed data
-- [x] Phase 5b - Admin: User Management: full CRUD for admin/teacher/student accounts, DataTables list, activate/disable, admin-initiated password reset
-- [x] Phase 5c - Admin: Academic Setup: Departments, Courses, Academic Years, Semesters, Sections - full CRUD where the entity design supports it
-- [x] Phase 5d - Admin: Subjects + Teacher Assignments: 3-component Subject form, assign/unassign with history
-- [x] Phase 5e - Admin: Exam Management + Grading Rules: 7-stage exam lifecycle, overlap/duplicate-safe grading rules
-- [x] Phase 5f - Admin: Notices + System Settings: Notice Board with audience/priority/expiry, a genuine singleton Settings table - **Phase 5 (Admin) complete**
-- [x] Phase 6a - Teacher: Dashboard + Assigned Classes/Subjects/Exams: Teacher shell built from scratch; a real pre-existing `ResultDAO` compile bug found and fixed
-- [x] **Phase 6b - Teacher: Marks Entry + Draft/Submit Workflow** (this delivery): the full Sec. 29 marks-entry grid, Draft/Submitted Results, My Activity - **Phase 6 (Teacher) complete**
-- [x] **Phase 7 - Result Calculation Engine** (this delivery): subject-level total/percentage/grade/gradePoint/pass via `ResultCalculationService` + `GradeUtil`; exam-level SGPA/overall grade/pass-fail/CGPA/rank/improvement-vs-previous via a new `result_summaries` table, ranked in bulk with a MySQL 8 `RANK() OVER` native query
-- [x] **Phase 8 - Approval / Publishing / Locking** (this delivery): `ResultService` (Approve/Publish/Lock + Sec. 47 integrity guards) + `/admin/approvals` (ResultApprovalServlet + approvals.jsp) - the first controller-reachable caller of Phase 7's calculation engine
-- [x] **Phase 9 - Result Versioning & Audit** (this delivery): `ResultService.correctResult` (Sec. 47's authorized-correction path, works on any status) + `/admin/results` browser + `/admin/results/history` audit trail/correction UI - reuses `ResultHistory`/`ResultHistoryDAO` (Phase 3, unused until now)
-- [x] **Phase 10 - Re-evaluation** (this delivery): `RevaluationService` (submit/resolve, composing Phase 9's `correctResult`) + `/student/dashboard` + `/student/revaluation` (this project's first student-facing pages) + `/admin/revaluations` (list + resolve)
-- [x] **Phase 11 - Comparative Analytics**: `StudentAnalyticsService` (class/topper/subject comparison, subject strength/weakness trend analysis) + `/student/dashboard` (rewritten) + `/student/results` + `/student/analysis` - first real Chart.js usage in this project
-- [x] **Phase 12 - Digital Marksheet & QR Verification**: `MarksheetService` + `VerificationService`, `PDFUtil` (OpenPDF) + `QRCodeUtil` (ZXing), `/student/marksheet` + `/student/marksheet/download`, public `/verify/result/{token}` (no auth - already whitelisted since Phase 4) - one new table (`marksheet_verifications`), zero changes to any previously existing table
-- [x] **Phase 13 - Bulk Excel Processing**: `ExcelUtil` (Apache POI), `StudentImportService` + `MarksImportService` (both all-or-nothing per `DataImportException`'s pre-existing Phase 1 contract, both reusing Phase 5b/6b's own creation/persistence methods rather than duplicating them), `/admin/users/import`+`/export`, `/teacher/marks-entry/import`+`/export`, and a Bulk Actions panel on `/admin/approvals` looping Phase 8's existing single-exam `publishExam`/`lockExam` - zero new database tables, zero schema changes
-- [x] **Phase 14 - Notifications**: `NotificationService` + `EmailNotificationService` (Sec. 37/24's own names), turning on the `Notification` entity/DAO (dormant since Phase 3) and the `Mail` config block (dormant since Phase 1); four triggers wired at their existing call sites - result published (single + bulk), re-evaluation resolved, notice published - in-app always first, email best-effort second. Found and fixed two unrelated pre-existing gaps along the way: `SystemSetting`/`MarksheetVerification` missing from `hibernate.cfg.xml`, and `flashSuccess`/`flashError` set by three earlier phases but never actually rendered anywhere
-- [x] **Phase 15 - Reporting**: `ReportService` (Sec. 37) maps Class Result / Subject Analysis / Topper / Improvement / Exam / Academic Year reports into one `ReportData` shape feeding `PDFUtil.buildTabularReport`, `ExcelUtil.writeXlsx`, and a shared print view uniformly; `/admin/reports` (full suite, already linked since Phase 5a) + `/teacher/reports/*` (Class Result + Subject Analysis only, scoped by Phase 13's own `requireAssignment` guard) - zero new database tables, zero schema changes, every underlying query already existed
-- [x] **Phase 16 - Polish** (this delivery): an audit, not a new feature. Found and fixed: `toggleSidebar()` defined since Phases 5a/6a/10 but never once invoked anywhere, meaning mobile navigation had been silently broken the entire time; `index.jsp` still Phase 1's raw placeholder despite its own comment promising a Phase 4 redirect; `error-404/500.jsp` still inline-styled placeholders, the latter's own comment naming unfinished exception-logging work now wired via this codebase's one deliberate scriptlet; zero of ~20 DataTables initializations had `responsive: true`, fixed once via a global default. Plus a skip-link, `:focus-visible`, global submit-loading states, and a horizontal-scroll table utility. Zero controller/service/DAO/entity changes
-- [ ] Phase 17 - Testing
-- [ ] Phase 18 - Documentation (SRS, ER/UML/DFD diagrams, deployment guide)
+## Requirements
 
-## License / Academic Use
+- **Java Development Kit (JDK):** Version 17 or later (Eclipse Adoptium OpenJDK recommended)
+- **Apache Maven:** Version 3.8 or later
+- **MySQL Database Server:** Version 8.0 or later
+- **Apache Tomcat:** Version 11.0.x (Jakarta EE 11 compatible)
+- **Web Browser:** Google Chrome, Mozilla Firefox, Microsoft Edge, or Safari
 
-Suitable for a B.Tech major project, portfolio piece, or GitHub showcase.
-Third-party dependency licenses (Apache 2.0, LGPL/MPL for OpenPDF, EPL for
-JSTL/Mail) are unchanged from their upstream projects - see each project's own
-license for redistribution terms.
+---
 
+## Database Setup
 
-cd C:\Users\jayki\IntelliResult-Nexus
-$env:Path = "C:\Downloaded\apache-maven-3.9.16-bin\apache-maven-3.9.16\bin;" + $env:Path
-$env:CATALINA_HOME = "C:\Downloaded\apache-tomcat-11.0.25-windows-x64\apache-tomcat-11.0.25"
-$env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-25.0.4.101-hotspot"
-$env:INTELLIRESULT_DB_PASSWORD = "jaykishandas30@"
-& "$env:CATALINA_HOME\bin\startup.bat"
+1. Log into your MySQL console or MySQL Workbench:
+   ```bash
+   mysql -u root -p
+   ```
 
+2. Create the database with UTF-8 character encoding:
+   ```sql
+   CREATE DATABASE intelliresult_nexus CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   ```
 
-http://localhost:8080/intelliresult-nexus/login
+3. Import the database schema:
+   ```bash
+   mysql -u root -p intelliresult_nexus < src/main/resources/db/schema.sql
+   ```
+
+4. *(Optional)* Import demo seed data:
+   ```bash
+   mysql -u root -p intelliresult_nexus < src/main/resources/db/seed-data.sql
+   ```
+
+---
+
+## Configuration
+
+Database credentials and optional service integrations can be configured via `src/main/resources/application.properties` or overridden using environment variables at runtime.
+
+### Environment Variables
+
+| Variable | Description | Default / Example |
+|---|---|---|
+| `INTELLIRESULT_DB_URL` | JDBC database connection URL | `jdbc:mysql://localhost:3306/intelliresult_nexus?useSSL=false&serverTimezone=UTC` |
+| `INTELLIRESULT_DB_USERNAME` | MySQL database username | `root` or `intelliresult_app` |
+| `INTELLIRESULT_DB_PASSWORD` | MySQL database password | `YOUR_DATABASE_PASSWORD` |
+| `INTELLIRESULT_MAIL_HOST` | *(Optional)* SMTP mail server host | `smtp.example.edu` |
+| `INTELLIRESULT_MAIL_PORT` | *(Optional)* SMTP mail server port | `587` |
+| `INTELLIRESULT_MAIL_USERNAME` | *(Optional)* SMTP username | `noreply@example.edu` |
+| `INTELLIRESULT_MAIL_PASSWORD` | *(Optional)* SMTP password | `YOUR_SMTP_PASSWORD` |
+| `INTELLIRESULT_SENTRY_DSN` | *(Optional)* Sentry error monitoring DSN | `YOUR_SENTRY_DSN` |
+
+---
+
+## Run the Project
+
+### First-Time Run (Initial Setup & Launch)
+
+Follow these steps when setting up and running the project for the very first time:
+
+#### Step 1: Create the Database & Import Schema
+Open your terminal or MySQL command-line client:
+```bash
+# 1. Log in to MySQL
+mysql -u root -p
+
+# 2. In MySQL prompt, create the database
+CREATE DATABASE intelliresult_nexus CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+exit;
+
+# 3. Import the database schema (from the project directory)
+mysql -u root -p intelliresult_nexus < src/main/resources/db/schema.sql
+
+# 4. (Optional) Import demo seed data
+mysql -u root -p intelliresult_nexus < src/main/resources/db/seed-data.sql
+```
+
+#### Step 2: Set Database Credentials
+Set the environment variables in your terminal so Tomcat / the application can connect to MySQL:
+
+**Windows PowerShell:**
+```powershell
+$env:INTELLIRESULT_DB_USERNAME="root"
+$env:INTELLIRESULT_DB_PASSWORD="YOUR_DATABASE_PASSWORD"
+```
+
+**Windows Command Prompt (CMD):**
+```cmd
+set INTELLIRESULT_DB_USERNAME=root
+set INTELLIRESULT_DB_PASSWORD=YOUR_DATABASE_PASSWORD
+```
+
+**Linux / macOS (Bash / Zsh):**
+```bash
+export INTELLIRESULT_DB_USERNAME="root"
+export INTELLIRESULT_DB_PASSWORD="YOUR_DATABASE_PASSWORD"
+```
+
+#### Step 3: Build the Application
+In the project root directory (where `pom.xml` is located), build the WAR archive:
+```bash
+mvn clean package
+```
+*(To build quickly skipping tests: `mvn clean package -DskipTests`)*.  
+This produces the deployment file: `target/intelliresult-nexus.war`.
+
+#### Step 4: Deploy WAR to Tomcat & Start Server
+Copy the generated WAR file into your Apache Tomcat `webapps` directory and start the server:
+
+**Windows PowerShell:**
+```powershell
+# Copy WAR to Tomcat webapps folder (adjust Tomcat path to match yours)
+Copy-Item "target\intelliresult-nexus.war" "C:\path\to\apache-tomcat-11.0.x\webapps\" -Force
+
+# Navigate to Tomcat bin directory and start
+Set-Location "C:\path\to\apache-tomcat-11.0.x\bin"
+.\catalina.bat run
+```
+
+**Linux / macOS:**
+```bash
+# Copy WAR to Tomcat webapps folder
+cp target/intelliresult-nexus.war $CATALINA_HOME/webapps/
+
+# Start Tomcat
+$CATALINA_HOME/bin/catalina.sh run
+```
+
+#### Step 5: Open in Browser
+Once Tomcat logs indicate `Deployment of web application archive [...intelliresult-nexus.war] has finished`, open:
+👉 **[http://localhost:8080/intelliresult-nexus/](http://localhost:8080/intelliresult-nexus/)**
+
+---
+
+### Subsequent Runs (Starting the Project Again)
+
+When you have already performed the first-time setup, you do not need to recreate the database or re-import the schema.
+
+#### Scenario A: Running Again Without Code Changes
+Simply ensure MySQL is running, set your environment variables, and start Tomcat:
+
+**Windows PowerShell:**
+```powershell
+$env:INTELLIRESULT_DB_USERNAME="root"
+$env:INTELLIRESULT_DB_PASSWORD="YOUR_DATABASE_PASSWORD"
+
+Set-Location "C:\path\to\apache-tomcat-11.0.x\bin"
+.\catalina.bat run
+```
+
+**Linux / macOS:**
+```bash
+export INTELLIRESULT_DB_USERNAME="root"
+export INTELLIRESULT_DB_PASSWORD="YOUR_DATABASE_PASSWORD"
+
+$CATALINA_HOME/bin/catalina.sh run
+```
+Open **[http://localhost:8080/intelliresult-nexus/](http://localhost:8080/intelliresult-nexus/)** in your browser.
+
+#### Scenario B: Running Again After Making Code Changes
+When you edit Java source files, JSPs, or configuration, re-package and copy the updated WAR:
+
+**Windows PowerShell:**
+```powershell
+# 1. In project directory, rebuild the WAR
+mvn package -DskipTests
+
+# 2. Copy the updated WAR to Tomcat webapps (Tomcat will auto-reload the app)
+Copy-Item "target\intelliresult-nexus.war" "C:\path\to\apache-tomcat-11.0.x\webapps\" -Force
+
+# 3. If Tomcat is not already running, start it:
+Set-Location "C:\path\to\apache-tomcat-11.0.x\bin"
+.\catalina.bat run
+```
+
+**Linux / macOS:**
+```bash
+# 1. Rebuild the WAR
+mvn package -DskipTests
+
+# 2. Copy updated WAR
+cp target/intelliresult-nexus.war $CATALINA_HOME/webapps/
+
+# 3. If Tomcat is not running, start it:
+$CATALINA_HOME/bin/catalina.sh run
+```
+
+---
+
+## Demo Accounts
+
+When seed data (`seed-data.sql`) is imported, the following default credentials are provided for testing:
+
+| Role | Email / Identifier | Password | Description |
+|---|---|---|---|
+| **Admin** | `admin@yourcollege.edu` | `Admin@123` | Full administrative institutional access |
+| **Teacher** | `jaykishandasgdg2024@gmail.com` | `Admin@123` | Faculty member assigned to Semester 5 CSE subjects |
+| **Student** | `riya.nair.0561@example.edu` | `Admin@123` | Student enrolled in Semester 5 CSE Section A |
+
+> [!NOTE]
+> All default demo accounts are for local testing and evaluation only. Always change passwords or remove test accounts prior to any production deployment.
+
+---
+
+## User Roles
+
+### Admin
+- Manage academic structure: Departments, courses, academic years, semesters, sections, and subjects.
+- Manage users: Create, update, deactivate, reset passwords, and assign teacher subjects.
+- Manage examinations: Create exams, define maximum and passing marks, set grading rules, and manage statuses.
+- Oversee results: Review teacher submissions, approve results, publish results to students, lock finalized results, and audit correction history.
+- Handle revaluations, system settings, activity audit logs, and institutional notice broadcasts.
+
+### Teacher
+- View assigned classes, subjects, enrolled student rosters, and scheduled examinations.
+- Enter component marks (theory, practical, internal) for students in assigned classes.
+- Save progress as drafts and submit complete marks rosters for administrative review.
+- Track draft and submitted results, view section performance statistics, and monitor notifications.
+
+### Student
+- Access personal dashboard showing current percentage, SGPA, cumulative CGPA, grade, and class rank.
+- View published examination results and subject component breakdowns.
+- Access comparative analytics (personal score vs. class average and section topper).
+- Download official PDF marksheets equipped with authenticity verification QR codes.
+- Request re-evaluation for eligible examination results and receive scheduling notifications.
+
+---
+
+## Main Workflows
+
+### Exam Workflow
+1. Admin creates an examination with date, session, and associated academic semester.
+2. Admin configures subject mark components (theory, practical, internal) and grading rules.
+3. Admin schedules and activates the examination; relevant teachers and students receive in-app notifications.
+4. Teachers enter student marks in their portal and submit them for administrative review.
+5. Admin approves and publishes the results, notifying all participating students and teachers.
+
+### Result Workflow
+1. Teacher navigates to Marks Entry, selects an active examination and assigned subject/section, and enters component scores.
+2. Teacher saves work as a draft or performs a full submission.
+3. System verifies validation constraints (e.g. scores cannot exceed maximum marks).
+4. Admin opens Result Approvals, inspects submitted rosters, and triggers approval/publication.
+5. `ResultCalculationService` computes totals, grades, grade points, SGPA, CGPA, section class ranks, and cohort ranks.
+6. Calculated results and QR-verifiable marksheets become immediately accessible to students.
+
+### Revaluation Workflow
+1. Student views an eligible published result and clicks "Request Re-evaluation" with a justification note.
+2. System logs the revaluation request under `revaluation_requests`.
+3. Admin reviews pending requests in the Admin Revaluation queue and chooses to Approve or Reject.
+4. If approved and marks are revised, `ResultService` records the modification in `result_history`, recalculates the affected student's summary, and recalculates section ranks.
+5. An automated notification updates the student regarding the revaluation outcome.
+
+---
+
+## License
+
+This project is licensed under the MIT License.
+
+---
+
+## Important Notes
+
+- **Authentication & Sessions:** User sessions timeout after 30 minutes of inactivity (`app.session.timeoutMinutes=30`).
+- **Database Safety:** Ensure MySQL character encoding is set to `utf8mb4` for Unicode and special character support.
+- **Production Deployment:** In production environments, always set `app.environment=production`, enforce HTTPS reverse proxy termination, and inject database credentials via secure environment variables.

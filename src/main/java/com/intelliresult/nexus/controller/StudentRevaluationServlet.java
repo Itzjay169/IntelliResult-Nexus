@@ -1,18 +1,16 @@
 package com.intelliresult.nexus.controller;
 
-import com.intelliresult.nexus.dao.ActivityLogDAO;
-import com.intelliresult.nexus.dao.ActivityLogDAOImpl;
 import com.intelliresult.nexus.dao.ResultDAO;
 import com.intelliresult.nexus.dao.ResultDAOImpl;
 import com.intelliresult.nexus.dao.RevaluationDAO;
 import com.intelliresult.nexus.dao.RevaluationDAOImpl;
 import com.intelliresult.nexus.dao.StudentDAO;
 import com.intelliresult.nexus.dao.StudentDAOImpl;
-import com.intelliresult.nexus.entity.ActivityLog;
 import com.intelliresult.nexus.entity.RevaluationRequest;
 import com.intelliresult.nexus.entity.Student;
 import com.intelliresult.nexus.entity.User;
 import com.intelliresult.nexus.exception.BaseApplicationException;
+import com.intelliresult.nexus.service.ActivityLogService;
 import com.intelliresult.nexus.service.RevaluationService;
 import com.intelliresult.nexus.util.AppConstants;
 import io.sentry.Sentry;
@@ -42,7 +40,7 @@ public class StudentRevaluationServlet extends HttpServlet {
     private final ResultDAO resultDAO = new ResultDAOImpl();
     private final RevaluationDAO revaluationDAO = new RevaluationDAOImpl();
     private final RevaluationService revaluationService = new RevaluationService();
-    private final ActivityLogDAO activityLogDAO = new ActivityLogDAOImpl();
+    private final ActivityLogService activityLogService = new ActivityLogService();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -68,14 +66,26 @@ public class StudentRevaluationServlet extends HttpServlet {
         }
         User currentUser = (User) request.getAttribute(AppConstants.REQUEST_ATTR_CURRENT_USER);
 
+        String resultIdParam = request.getParameter("resultId");
+        Long resultId;
         try {
-            Long resultId = Long.valueOf(request.getParameter("resultId"));
+            if (resultIdParam == null || resultIdParam.isBlank()) {
+                throw new NumberFormatException("Missing resultId");
+            }
+            resultId = Long.valueOf(resultIdParam);
+        } catch (NumberFormatException e) {
+            request.getSession().setAttribute("flashError", "Invalid or missing result selected.");
+            response.sendRedirect(request.getContextPath() + "/student/revaluation");
+            return;
+        }
+
+        try {
             String reason = request.getParameter("reason");
 
             RevaluationRequest submitted = revaluationService.submitRequest(student.getId(), resultId, reason);
 
-            activityLogDAO.save(new ActivityLog(currentUser, "REVALUATION_REQUESTED",
-                    "Request #" + submitted.getId() + " submitted for result #" + resultId, request.getRemoteAddr()));
+            activityLogService.log(currentUser, "REVALUATION_REQUESTED",
+                    "Request #" + submitted.getId() + " submitted for result #" + resultId, request.getRemoteAddr());
 
             flashSuccessAndRedirect(request, response, "Your re-evaluation request has been submitted. You'll see its status below once an administrator reviews it.");
         } catch (BaseApplicationException e) {

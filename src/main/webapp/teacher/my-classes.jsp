@@ -26,6 +26,7 @@
                  one-time section gets a small badge next to its name so a
                  teacher can tell an ad-hoc batch apart from their regular
                  ongoing sections at a glance. --%>
+            <div class="table-scroll">
             <table id="classesTable" class="display" style="width:100%">
                 <thead>
                 <tr>
@@ -61,6 +62,7 @@
                 </c:forEach>
                 </tbody>
             </table>
+            </div>
         </c:otherwise>
     </c:choose>
 </div>

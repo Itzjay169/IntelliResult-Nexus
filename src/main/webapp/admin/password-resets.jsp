@@ -16,6 +16,7 @@
             <div class="panel-empty"><p>No password changes are waiting on review.</p></div>
         </c:when>
         <c:otherwise>
+            <div class="table-scroll">
             <table class="display" style="width:100%">
                 <thead><tr><th>User</th><th>Role</th><th>Verified</th><th>Requested</th><th></th></tr></thead>
                 <tbody>
@@ -33,6 +34,7 @@
                 </c:forEach>
                 </tbody>
             </table>
+            </div>
         </c:otherwise>
     </c:choose>
 </div>
@@ -44,6 +46,7 @@
             <div class="panel-empty"><p>No password changes have been reviewed yet.</p></div>
         </c:when>
         <c:otherwise>
+            <div class="table-scroll">
             <table class="display" style="width:100%">
                 <thead><tr><th>User</th><th>Status</th><th>Reviewed by</th><th>Reviewed</th></tr></thead>
                 <tbody>
@@ -57,6 +60,7 @@
                 </c:forEach>
                 </tbody>
             </table>
+            </div>
         </c:otherwise>
     </c:choose>
 </div>

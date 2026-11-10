@@ -25,6 +25,18 @@ public class Notification extends CreatedAtEntity {
     @Column(name = "is_read", nullable = false)
     private boolean read = false;
 
+    @Column(name = "notification_type", nullable = false, length = 50)
+    private String notificationType = "GENERAL";
+
+    @Column(name = "related_entity_type", length = 50)
+    private String relatedEntityType;
+
+    @Column(name = "related_entity_id")
+    private Long relatedEntityId;
+
+    @Column(name = "link_url", length = 255)
+    private String linkUrl;
+
     protected Notification() {
     }
 
@@ -32,6 +44,18 @@ public class Notification extends CreatedAtEntity {
         this.user = user;
         this.title = title;
         this.message = message;
+        this.notificationType = "GENERAL";
+    }
+
+    public Notification(User user, String title, String message, String notificationType,
+                        String relatedEntityType, Long relatedEntityId, String linkUrl) {
+        this.user = user;
+        this.title = title;
+        this.message = message;
+        this.notificationType = notificationType != null && !notificationType.isBlank() ? notificationType : "GENERAL";
+        this.relatedEntityType = relatedEntityType;
+        this.relatedEntityId = relatedEntityId;
+        this.linkUrl = linkUrl;
     }
 
     public User getUser() { return user; }
@@ -39,4 +63,12 @@ public class Notification extends CreatedAtEntity {
     public String getMessage() { return message; }
     public boolean isRead() { return read; }
     public void markRead() { this.read = true; }
+    public String getNotificationType() { return notificationType; }
+    public void setNotificationType(String notificationType) { this.notificationType = notificationType; }
+    public String getRelatedEntityType() { return relatedEntityType; }
+    public void setRelatedEntityType(String relatedEntityType) { this.relatedEntityType = relatedEntityType; }
+    public Long getRelatedEntityId() { return relatedEntityId; }
+    public void setRelatedEntityId(Long relatedEntityId) { this.relatedEntityId = relatedEntityId; }
+    public String getLinkUrl() { return linkUrl; }
+    public void setLinkUrl(String linkUrl) { this.linkUrl = linkUrl; }
 }

@@ -22,6 +22,7 @@
             <p class="panel-empty">Nothing submitted yet.</p>
         </c:when>
         <c:otherwise>
+            <div class="table-scroll">
             <table id="submittedTable" class="display" style="width:100%">
                 <thead>
                 <tr>
@@ -68,6 +69,7 @@
                 </c:forEach>
                 </tbody>
             </table>
+            </div>
         </c:otherwise>
     </c:choose>
 </div>

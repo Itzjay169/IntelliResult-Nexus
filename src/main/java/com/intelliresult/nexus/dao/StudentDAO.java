@@ -15,4 +15,5 @@ public interface StudentDAO extends GenericDAO<Student, Long> {
 
     List<Student> findBySection(Long sectionId);
     List<Student> findByCourse(Long courseId);
+    List<Student> findBySemester(Long semesterId);
 }

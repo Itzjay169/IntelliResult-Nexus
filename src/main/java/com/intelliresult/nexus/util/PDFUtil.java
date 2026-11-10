@@ -264,8 +264,7 @@ public final class PDFUtil {
         addSummaryCell(table, "PERCENTAGE", orDash(data.overallPercentage()) + "%", FONT_SUMMARY_VALUE);
         addSummaryCell(table, "GRADE", orDash(data.overallGrade()), FONT_SUMMARY_VALUE);
         addSummaryCell(table, "SGPA", orDash(data.sgpa()), FONT_SUMMARY_VALUE);
-        addSummaryCell(table, data.cgpa() != null ? "CGPA" : "CLASS RANK",
-                data.cgpa() != null ? orDash(data.cgpa()) : orDash(data.classRank()), FONT_SUMMARY_VALUE);
+        addSummaryCell(table, "CGPA", orDash(data.cgpa()), FONT_SUMMARY_VALUE);
         addSummaryCell(table, "RESULT", data.pass() ? "PASS" : "FAIL", data.pass() ? FONT_PASS : FONT_FAIL);
 
         document.add(table);

@@ -3,23 +3,37 @@ package com.intelliresult.nexus.service;
 import com.intelliresult.nexus.config.HibernateUtil;
 import com.intelliresult.nexus.dao.NotificationDAO;
 import com.intelliresult.nexus.dao.NotificationDAOImpl;
+import com.intelliresult.nexus.dao.StudentDAO;
+import com.intelliresult.nexus.dao.StudentDAOImpl;
+import com.intelliresult.nexus.dao.SubjectDAO;
+import com.intelliresult.nexus.dao.SubjectDAOImpl;
+import com.intelliresult.nexus.dao.TeacherSubjectDAO;
+import com.intelliresult.nexus.dao.TeacherSubjectDAOImpl;
 import com.intelliresult.nexus.dao.UserDAO;
 import com.intelliresult.nexus.dao.UserDAOImpl;
 import com.intelliresult.nexus.entity.Exam;
 import com.intelliresult.nexus.entity.Notice;
 import com.intelliresult.nexus.entity.Notification;
+import com.intelliresult.nexus.entity.Result;
 import com.intelliresult.nexus.entity.RevaluationRequest;
 import com.intelliresult.nexus.entity.Student;
+import com.intelliresult.nexus.entity.Subject;
+import com.intelliresult.nexus.entity.TeacherSubject;
 import com.intelliresult.nexus.entity.User;
 import com.intelliresult.nexus.entity.enums.RevaluationStatus;
 import com.intelliresult.nexus.entity.enums.UserRole;
 import com.intelliresult.nexus.exception.AuthorizationException;
 import com.intelliresult.nexus.exception.ResourceNotFoundException;
+import com.intelliresult.nexus.util.DateUtil;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Sec. 37 names this service explicitly. The facade every controller that
@@ -45,14 +59,165 @@ public class NotificationService {
 
     private final NotificationDAO notificationDAO = new NotificationDAOImpl();
     private final UserDAO userDAO = new UserDAOImpl();
+    private final StudentDAO studentDAO = new StudentDAOImpl();
+    private final TeacherSubjectDAO teacherSubjectDAO = new TeacherSubjectDAOImpl();
+    private final SubjectDAO subjectDAO = new SubjectDAOImpl();
     private final EmailNotificationService emailNotificationService = new EmailNotificationService();
 
-    /** Called once per student whose result just became visible (Sec. 23's "Result published") - the caller (ResultApprovalServlet) already has the ResultSummary list publishExam/bulk-publish returns, so this takes the resolved Student directly rather than re-querying. */
+    /** Called once per student whose result just became visible (Sec. 23's "Result published"). */
     public void notifyResultPublished(Student student, Exam exam) {
         User user = student.getUser();
-        inTransaction(() -> notificationDAO.save(new Notification(user, "Result Published",
-                "Your result for " + exam.getName() + " has been published. Log in to view your marks, grade, and rank.")));
+        String dateStr = exam.getStartTime() != null ? DateUtil.formatForDisplay(exam.getStartTime().toLocalDate()) : "";
+        String title = "Result Published: " + exam.getName();
+        String message = "Results published for " + exam.getName() + (dateStr.isEmpty() ? "" : " on " + dateStr)
+                + ". You can now view your result and download your marksheet.";
+        String linkUrl = "/student/results?examId=" + exam.getId();
+
+        inTransaction(() -> {
+            if (!notificationDAO.existsByRecipientAndEntity(user.getId(), "RESULT_PUBLISHED", "EXAM", exam.getId())) {
+                notificationDAO.save(new Notification(user, title, message, "RESULT_PUBLISHED", "EXAM", exam.getId(), linkUrl));
+            }
+            return null;
+        });
         emailNotificationService.sendResultPublished(user, exam);
+    }
+
+    /** Notifies all teachers assigned to subjects included in the published exam. */
+    public void notifyResultPublishedToTeachers(Exam exam) {
+        if (exam.getSemester() == null) return;
+        List<TeacherSubject> assignments = teacherSubjectDAO.findActiveBySemester(exam.getSemester().getId());
+        Set<Long> notifiedUserIds = new HashSet<>();
+        String dateStr = exam.getStartTime() != null ? DateUtil.formatForDisplay(exam.getStartTime().toLocalDate()) : "";
+        String title = "Results Published: " + exam.getName();
+        String linkUrl = "/teacher/submitted-results?examId=" + exam.getId();
+
+        inTransaction(() -> {
+            for (TeacherSubject ts : assignments) {
+                User teacherUser = ts.getTeacher().getUser();
+                if (notifiedUserIds.add(teacherUser.getId())) {
+                    if (!notificationDAO.existsByRecipientAndEntity(teacherUser.getId(), "RESULT_PUBLISHED", "EXAM", exam.getId())) {
+                        String message = "Results published for " + exam.getName() + (dateStr.isEmpty() ? "" : " on " + dateStr)
+                                + ". Assigned subject: " + ts.getSubject().getSubjectName() + " (" + ts.getSection().getName() + "). You can now view submitted results.";
+                        notificationDAO.save(new Notification(teacherUser, title, message, "RESULT_PUBLISHED", "EXAM", exam.getId(), linkUrl));
+                    }
+                }
+            }
+            return null;
+        });
+    }
+
+    /** Notifies the admin that results have been published. */
+    public void notifyResultPublishedToAdmin(Exam exam, User admin) {
+        if (admin == null) return;
+        String title = "Results Published: " + exam.getName();
+        String message = "Results for " + exam.getName() + " have been successfully published. Students and assigned teachers have been notified.";
+        String linkUrl = "/admin/results?examId=" + exam.getId();
+
+        inTransaction(() -> {
+            notificationDAO.save(new Notification(admin, title, message, "RESULT_PUBLISHED", "EXAM", exam.getId(), linkUrl));
+            return null;
+        });
+    }
+
+    /** Notifies student and evaluator when a result is corrected/republished after initial publication. */
+    public void notifyResultUpdated(Result result, User updater, String reason) {
+        Student student = result.getStudent();
+        Exam exam = result.getExam();
+        Subject subject = result.getSubject();
+        String sTitle = "Result Updated: " + subject.getSubjectName();
+        String sMessage = "Updated results are available for " + subject.getSubjectName() + " (" + exam.getName() + "). Your marks have been updated. Reason: " + reason;
+        String sLink = "/student/results?examId=" + exam.getId();
+
+        inTransaction(() -> {
+            notificationDAO.save(new Notification(student.getUser(), sTitle, sMessage, "RESULT_UPDATED", "RESULT", result.getId(), sLink));
+            return null;
+        });
+
+        try {
+            if (student.getCurrentSection() != null) {
+                List<TeacherSubject> tsList = teacherSubjectDAO.findActiveBySubjectAndSection(subject.getId(), student.getCurrentSection().getId());
+                for (TeacherSubject ts : tsList) {
+                    User teacherUser = ts.getTeacher().getUser();
+                    String tTitle = "Marks Corrected: " + student.getRollNo() + " - " + subject.getSubjectCode();
+                    String tMessage = "Marks for " + student.getRollNo() + " in " + subject.getSubjectName()
+                            + " were corrected by " + updater.getFullName() + ". Reason: " + reason;
+                    String tLink = "/teacher/submitted-results?examId=" + exam.getId();
+                    inTransaction(() -> {
+                        notificationDAO.save(new Notification(teacherUser, tTitle, tMessage, "RESULT_UPDATED", "RESULT", result.getId(), tLink));
+                        return null;
+                    });
+                }
+            }
+        } catch (Exception ignored) {
+            // Non-critical notification failure
+        }
+    }
+
+    /** Generates exam creation notifications for relevant teachers and students. */
+    public void notifyExamCreated(Exam exam) {
+        notifyExamAudience(exam, "EXAM_CREATED", "New Exam Created: " + exam.getName());
+    }
+
+    /** Generates or updates exam scheduled notifications for relevant teachers and students. */
+    public void notifyExamScheduled(Exam exam) {
+        notifyExamAudience(exam, "EXAM_SCHEDULED", "New Exam Scheduled: " + exam.getName());
+    }
+
+    /** Generates exam updated notifications when meaningful details change. */
+    public void notifyExamUpdated(Exam exam, boolean detailsChanged) {
+        if (!detailsChanged) return;
+        notifyExamAudience(exam, "EXAM_UPDATED", "Exam Updated: " + exam.getName());
+    }
+
+    private void notifyExamAudience(Exam exam, String notificationType, String titlePrefix) {
+        if (exam == null || exam.getSemester() == null) return;
+        Long semesterId = exam.getSemester().getId();
+
+        String dateStr = exam.getStartTime() != null ? DateUtil.formatForDisplay(exam.getStartTime().toLocalDate()) : "TBA";
+        String timeStr = exam.getStartTime() != null ? exam.getStartTime().format(DateTimeFormatter.ofPattern("hh:mm a")) : "TBA";
+        String courseStr = exam.getSemester().getCourse() != null ? exam.getSemester().getCourse().getName() : "";
+        int semNum = exam.getSemester().getSemesterNumber();
+
+        List<Subject> subjects = subjectDAO.findBySemester(semesterId);
+        String subjectNames = subjects.stream().map(Subject::getSubjectName).collect(Collectors.joining(", "));
+
+        String studentMsg = "New exam scheduled: " + exam.getName() + " on " + dateStr + " at " + timeStr + "."
+                + " Course: " + courseStr + " (Semester " + semNum + ")"
+                + (subjectNames.isEmpty() ? "" : ". Subjects: " + subjectNames) + ".";
+
+        // Notify enrolled students
+        List<Student> students = studentDAO.findBySemester(semesterId);
+        inTransaction(() -> {
+            for (Student student : students) {
+                if (student.getUser() == null) continue;
+                Long uid = student.getUser().getId();
+                if (!notificationDAO.existsByRecipientAndEntity(uid, notificationType, "EXAM", exam.getId())) {
+                    notificationDAO.save(new Notification(student.getUser(), titlePrefix, studentMsg,
+                            notificationType, "EXAM", exam.getId(), "/student/exams"));
+                }
+            }
+            return null;
+        });
+
+        // Notify assigned teachers
+        List<TeacherSubject> assignments = teacherSubjectDAO.findActiveBySemester(semesterId);
+        Set<Long> notifiedTeacherUids = new HashSet<>();
+        inTransaction(() -> {
+            for (TeacherSubject ts : assignments) {
+                User tUser = ts.getTeacher().getUser();
+                if (tUser == null) continue;
+                if (notifiedTeacherUids.add(tUser.getId())) {
+                    if (!notificationDAO.existsByRecipientAndEntity(tUser.getId(), notificationType, "EXAM", exam.getId())) {
+                        String tMsg = "New exam scheduled: " + exam.getName() + " on " + dateStr + " at " + timeStr + "."
+                                + " Assigned subject: " + ts.getSubject().getSubjectName()
+                                + " (" + ts.getSection().getName() + ", Sem " + semNum + ").";
+                        notificationDAO.save(new Notification(tUser, titlePrefix, tMsg,
+                                notificationType, "EXAM", exam.getId(), "/teacher/exams"));
+                    }
+                }
+            }
+            return null;
+        });
     }
 
     /** Sec. 23's "Re-evaluation status changed" and "Marks updated through authorized process" are the same event here: {@code resolveRequest} only reaches APPROVED after the marks correction (Sec. 14) already happened, so one notification correctly covers both. Fires for the student (this method) AND the admin who assigned it (notifyRevaluationResolvedToAdmin) - Sec. "System automatically notifies both Admin and the student" names both explicitly. */

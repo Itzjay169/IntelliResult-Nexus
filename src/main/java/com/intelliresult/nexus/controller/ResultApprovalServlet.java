@@ -1,18 +1,16 @@
 package com.intelliresult.nexus.controller;
 
-import com.intelliresult.nexus.dao.ActivityLogDAO;
-import com.intelliresult.nexus.dao.ActivityLogDAOImpl;
 import com.intelliresult.nexus.dao.ExamDAO;
 import com.intelliresult.nexus.dao.ExamDAOImpl;
 import com.intelliresult.nexus.dao.ResultDAO;
 import com.intelliresult.nexus.dao.ResultDAOImpl;
-import com.intelliresult.nexus.entity.ActivityLog;
 import com.intelliresult.nexus.entity.Exam;
 import com.intelliresult.nexus.entity.Result;
 import com.intelliresult.nexus.entity.ResultSummary;
 import com.intelliresult.nexus.entity.User;
 import com.intelliresult.nexus.entity.enums.ResultStatus;
 import com.intelliresult.nexus.exception.BaseApplicationException;
+import com.intelliresult.nexus.service.ActivityLogService;
 import com.intelliresult.nexus.service.NotificationService;
 import com.intelliresult.nexus.service.ResultService;
 import com.intelliresult.nexus.util.AppConstants;
@@ -27,7 +25,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -62,13 +60,14 @@ public class ResultApprovalServlet extends HttpServlet {
     private final ExamDAO examDAO = new ExamDAOImpl();
     private final ResultDAO resultDAO = new ResultDAOImpl();
     private final ResultService resultService = new ResultService();
-    private final ActivityLogDAO activityLogDAO = new ActivityLogDAOImpl();
+    private final ActivityLogService activityLogService = new ActivityLogService();
     private final NotificationService notificationService = new NotificationService();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         List<Exam> exams = examDAO.findAll();
+        exams.sort(Comparator.comparing(Exam::getStartTime, Comparator.nullsLast(Comparator.reverseOrder())));
         request.setAttribute("exams", exams);
 
         Long examId = resolveExamId(request, exams);
@@ -83,7 +82,7 @@ public class ResultApprovalServlet extends HttpServlet {
         request.getRequestDispatcher("/admin/approvals.jsp").forward(request, response);
     }
 
-    /** GET's own {@code examId} param if present and valid; otherwise the first exam in the list, so the page is never a blank prompt-to-choose on a system that already has exams - matching how {@code exams.jsp}'s own list is never gated behind a required filter either. Null only when there are no exams at all yet. */
+    /** GET's own {@code examId} param if present and valid; otherwise the exam that has SUBMITTED results, else the latest exam. */
     private Long resolveExamId(HttpServletRequest request, List<Exam> exams) {
         String param = request.getParameter("examId");
         if (param != null && !param.isBlank()) {
@@ -96,7 +95,15 @@ public class ResultApprovalServlet extends HttpServlet {
                 // falls through to the default below
             }
         }
-        return exams.isEmpty() ? null : exams.get(0).getId();
+        if (exams.isEmpty()) {
+            return null;
+        }
+        for (Exam e : exams) {
+            if (!resultDAO.findByExamAndStatus(e.getId(), ResultStatus.SUBMITTED).isEmpty()) {
+                return e.getId();
+            }
+        }
+        return exams.get(0).getId();
     }
 
     @Override
@@ -110,29 +117,40 @@ public class ResultApprovalServlet extends HttpServlet {
             return;
         }
 
-        Long examId = Long.valueOf(request.getParameter("examId"));
+        String examIdParam = request.getParameter("examId");
+        Long examId;
+        try {
+            if (examIdParam == null || examIdParam.isBlank()) {
+                throw new NumberFormatException("Missing examId");
+            }
+            examId = Long.valueOf(examIdParam);
+        } catch (NumberFormatException e) {
+            request.getSession().setAttribute("flashError", "Invalid or missing examination ID.");
+            response.sendRedirect(request.getContextPath() + "/admin/approvals");
+            return;
+        }
 
         try {
             if (path.endsWith("/approve")) {
                 List<Long> resultIds = parseResultIds(request);
                 List<Result> approved = resultService.approveResults(resultIds, currentAdmin);
-                activityLogDAO.save(new ActivityLog(currentAdmin, "RESULT_APPROVED",
-                        approved.size() + " result(s) approved for exam #" + examId, request.getRemoteAddr()));
+                activityLogService.log(currentAdmin, "RESULT_APPROVED",
+                        approved.size() + " result(s) approved for exam #" + examId, request.getRemoteAddr());
                 flashSuccessAndRedirect(request, response, examId,
                         approved.size() + " result" + (approved.size() == 1 ? "" : "s") + " approved.");
             } else if (path.endsWith("/publish")) {
                 List<ResultSummary> summaries = resultService.publishExam(examId);
-                activityLogDAO.save(new ActivityLog(currentAdmin, "RESULT_PUBLISHED",
+                activityLogService.log(currentAdmin, "RESULT_PUBLISHED",
                         "Exam #" + examId + " published - " + summaries.size() + " student summary/summaries generated",
-                        request.getRemoteAddr()));
-                notifyPublishedStudents(summaries);
+                        request.getRemoteAddr());
+                notifyPublication(examId, summaries, currentAdmin);
                 flashSuccessAndRedirect(request, response, examId,
                         "Results published. " + summaries.size() + " student"
                                 + (summaries.size() == 1 ? "'s" : "s'") + " overall percentage, SGPA, and rank are now calculated.");
             } else if (path.endsWith("/lock")) {
                 int locked = resultService.lockExam(examId);
-                activityLogDAO.save(new ActivityLog(currentAdmin, "RESULT_LOCKED",
-                        locked + " result(s) locked for exam #" + examId, request.getRemoteAddr()));
+                activityLogService.log(currentAdmin, "RESULT_LOCKED",
+                        locked + " result(s) locked for exam #" + examId, request.getRemoteAddr());
                 flashSuccessAndRedirect(request, response, examId,
                         locked + " result" + (locked == 1 ? "" : "s") + " locked. Further changes require the re-evaluation process.");
             } else {
@@ -143,6 +161,16 @@ public class ResultApprovalServlet extends HttpServlet {
             request.getSession().setAttribute("flashError", e.getMessage());
             response.sendRedirect(request.getContextPath() + "/admin/approvals?examId=" + examId);
         } catch (RuntimeException e) {
+            Throwable cause = e;
+            while (cause != null && !(cause instanceof BaseApplicationException)) {
+                cause = cause.getCause();
+            }
+            if (cause instanceof BaseApplicationException baseEx) {
+                LOGGER.info("Result approval operation failed: {}", baseEx.getMessage());
+                request.getSession().setAttribute("flashError", baseEx.getMessage());
+                response.sendRedirect(request.getContextPath() + "/admin/approvals?examId=" + examId);
+                return;
+            }
             LOGGER.error("Unexpected error in result approval", e);
             Sentry.captureException(e, scope -> scope.setTag("module", "result-engine"));
             request.getSession().setAttribute("flashError", "Something went wrong. Please try again.");
@@ -155,7 +183,15 @@ public class ResultApprovalServlet extends HttpServlet {
         if (params == null) {
             return List.of();
         }
-        return Arrays.stream(params).map(Long::valueOf).toList();
+        List<Long> ids = new ArrayList<>();
+        for (String p : params) {
+            try {
+                if (p != null && !p.isBlank()) {
+                    ids.add(Long.valueOf(p.trim()));
+                }
+            } catch (NumberFormatException ignored) {}
+        }
+        return ids;
     }
 
     /**
@@ -185,14 +221,14 @@ public class ResultApprovalServlet extends HttpServlet {
             try {
                 if (isPublish) {
                     List<ResultSummary> summaries = resultService.publishExam(examId);
-                    activityLogDAO.save(new ActivityLog(currentAdmin, "RESULT_PUBLISHED",
+                    activityLogService.log(currentAdmin, "RESULT_PUBLISHED",
                             "Exam #" + examId + " published (bulk action) - " + summaries.size() + " summary/summaries generated",
-                            request.getRemoteAddr()));
-                    notifyPublishedStudents(summaries);
+                            request.getRemoteAddr());
+                    notifyPublication(examId, summaries, currentAdmin);
                 } else {
                     int locked = resultService.lockExam(examId);
-                    activityLogDAO.save(new ActivityLog(currentAdmin, "RESULT_LOCKED",
-                            locked + " result(s) locked for exam #" + examId + " (bulk action)", request.getRemoteAddr()));
+                    activityLogService.log(currentAdmin, "RESULT_LOCKED",
+                            locked + " result(s) locked for exam #" + examId + " (bulk action)", request.getRemoteAddr());
                 }
                 succeeded++;
             } catch (BaseApplicationException e) {
@@ -211,6 +247,22 @@ public class ResultApprovalServlet extends HttpServlet {
         }
         request.getSession().setAttribute(succeeded > 0 ? "flashSuccess" : "flashError", message.toString());
         response.sendRedirect(request.getContextPath() + "/admin/approvals");
+    }
+
+    private void notifyPublication(Long examId, List<ResultSummary> summaries, User admin) {
+        notifyPublishedStudents(summaries);
+        examDAO.findById(examId).ifPresent(ex -> {
+            try {
+                notificationService.notifyResultPublishedToTeachers(ex);
+            } catch (Exception e) {
+                LOGGER.error("Could not notify teachers for published exam {}", examId, e);
+            }
+            try {
+                notificationService.notifyResultPublishedToAdmin(ex, admin);
+            } catch (Exception e) {
+                LOGGER.error("Could not notify admin for published exam {}", examId, e);
+            }
+        });
     }
 
     /**
@@ -237,7 +289,15 @@ public class ResultApprovalServlet extends HttpServlet {
         if (params == null) {
             return List.of();
         }
-        return Arrays.stream(params).map(Long::valueOf).toList();
+        List<Long> ids = new ArrayList<>();
+        for (String p : params) {
+            try {
+                if (p != null && !p.isBlank()) {
+                    ids.add(Long.valueOf(p.trim()));
+                }
+            } catch (NumberFormatException ignored) {}
+        }
+        return ids;
     }
 
     private void flashSuccessAndRedirect(HttpServletRequest request, HttpServletResponse response, Long examId, String message)

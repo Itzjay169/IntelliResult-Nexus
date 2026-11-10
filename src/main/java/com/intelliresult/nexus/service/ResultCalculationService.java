@@ -266,6 +266,21 @@ public class ResultCalculationService {
         BigDecimal overallPercentage = GradeUtil.calculatePercentage(totalObtained, totalMax);
         GradingRule matched = resolveGradeOrThrow(overallPercentage, exam);
         BigDecimal sgpa = GradeUtil.weightedAverage(subjectGradePoints).orElse(null);
+        if (sgpa == null) {
+            List<BigDecimal> gps = calculated.stream()
+                    .map(Result::getGradePoint)
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+            if (!gps.isEmpty()) {
+                BigDecimal sum = BigDecimal.ZERO;
+                for (BigDecimal gp : gps) {
+                    sum = sum.add(gp);
+                }
+                sgpa = sum.divide(BigDecimal.valueOf(gps.size()), 2, java.math.RoundingMode.HALF_UP);
+            } else {
+                sgpa = matched.getGradePoint();
+            }
+        }
 
         ResultSummary summary = resultSummaryDAO.findByStudentAndExam(student.getId(), exam.getId())
                 .orElseGet(() -> new ResultSummary(student, exam));
@@ -273,7 +288,7 @@ public class ResultCalculationService {
                 overallPercentage, matched.getGrade(), matched.getGradePoint(), sgpa, allSubjectsPass);
 
         applyImprovement(summary, student, exam, overallPercentage);
-        applyCgpaIfFinalExamination(summary, student, exam);
+        applyCgpa(summary, student, exam);
 
         if (summary.getId() == null) {
             resultSummaryDAO.save(summary);
@@ -296,39 +311,51 @@ public class ResultCalculationService {
     }
 
     /**
-     * CGPA only on a FINAL_EXAMINATION summary - see
-     * {@link ResultSummary#getCgpa()}'s own Javadoc for why. Credit-weighted
-     * across one summary per completed semester: this exam's own
-     * just-computed (SGPA, totalCredits) plus the most recent prior
-     * FINAL_EXAMINATION summary for every *other* semester this student has
-     * one for (guarding against a retake producing two FINAL_EXAMINATION
-     * rows in the same semester and double-counting it - the DAO method's
-     * own Javadoc flags this as a real possibility it deliberately leaves
-     * for calculation logic to resolve, not a query filter).
+     * Credit-weighted CGPA computation: for FINAL_EXAMINATION, aggregates across
+     * completed semesters; for other examinations (midterms, unit tests), aggregates
+     * across all completed examinations up to the current exam.
      */
-    private void applyCgpaIfFinalExamination(ResultSummary summary, Student student, Exam exam) {
-        if (exam.getExamType() != ExamType.FINAL_EXAMINATION || summary.getSgpa() == null) {
+    private void applyCgpa(ResultSummary summary, Student student, Exam exam) {
+        if (summary.getSgpa() == null) {
             return;
         }
-        // Ascending by exam.startTime (the DAO's documented contract) - a later entry for the same
-        // semester simply overwrites an earlier one in this map, so what remains is the most recent
-        // FINAL_EXAMINATION per semester.
-        Map<Long, ResultSummary> mostRecentPerSemester = new LinkedHashMap<>();
-        for (ResultSummary priorSummary : resultSummaryDAO.findFinalExamSummariesForStudent(student.getId())) {
-            if (!priorSummary.getExam().getId().equals(exam.getId())) {
-                mostRecentPerSemester.put(priorSummary.getExam().getSemester().getId(), priorSummary);
+        if (exam.getExamType() == ExamType.FINAL_EXAMINATION) {
+            Map<Long, ResultSummary> mostRecentPerSemester = new LinkedHashMap<>();
+            for (ResultSummary priorSummary : resultSummaryDAO.findFinalExamSummariesForStudent(student.getId())) {
+                if (!priorSummary.getExam().getId().equals(exam.getId())) {
+                    mostRecentPerSemester.put(priorSummary.getExam().getSemester().getId(), priorSummary);
+                }
             }
-        }
 
-        List<GradeUtil.WeightedValue> semesterSgpas = new ArrayList<>();
-        for (ResultSummary priorSummary : mostRecentPerSemester.values()) {
-            if (priorSummary.getSgpa() != null) {
-                semesterSgpas.add(new GradeUtil.WeightedValue(priorSummary.getSgpa(), priorSummary.getTotalCredits()));
+            List<GradeUtil.WeightedValue> semesterSgpas = new ArrayList<>();
+            for (ResultSummary priorSummary : mostRecentPerSemester.values()) {
+                if (priorSummary.getSgpa() != null) {
+                    BigDecimal cr = priorSummary.getTotalCredits() != null && priorSummary.getTotalCredits().compareTo(BigDecimal.ZERO) > 0
+                            ? priorSummary.getTotalCredits() : BigDecimal.ONE;
+                    semesterSgpas.add(new GradeUtil.WeightedValue(priorSummary.getSgpa(), cr));
+                }
             }
-        }
-        semesterSgpas.add(new GradeUtil.WeightedValue(summary.getSgpa(), summary.getTotalCredits()));
+            BigDecimal curCr = summary.getTotalCredits() != null && summary.getTotalCredits().compareTo(BigDecimal.ZERO) > 0
+                    ? summary.getTotalCredits() : BigDecimal.ONE;
+            semesterSgpas.add(new GradeUtil.WeightedValue(summary.getSgpa(), curCr));
 
-        GradeUtil.weightedAverage(semesterSgpas).ifPresent(summary::applyCgpa);
+            GradeUtil.weightedAverage(semesterSgpas).ifPresent(summary::applyCgpa);
+        } else {
+            List<ResultSummary> allSummaries = resultSummaryDAO.findAllForStudent(student.getId());
+            List<GradeUtil.WeightedValue> allSgpas = new ArrayList<>();
+            for (ResultSummary s : allSummaries) {
+                if (!s.getExam().getId().equals(exam.getId()) && s.getSgpa() != null) {
+                    BigDecimal cr = s.getTotalCredits() != null && s.getTotalCredits().compareTo(BigDecimal.ZERO) > 0
+                            ? s.getTotalCredits() : BigDecimal.ONE;
+                    allSgpas.add(new GradeUtil.WeightedValue(s.getSgpa(), cr));
+                }
+            }
+            BigDecimal curCr = summary.getTotalCredits() != null && summary.getTotalCredits().compareTo(BigDecimal.ZERO) > 0
+                    ? summary.getTotalCredits() : BigDecimal.ONE;
+            allSgpas.add(new GradeUtil.WeightedValue(summary.getSgpa(), curCr));
+
+            GradeUtil.weightedAverage(allSgpas).ifPresent(summary::applyCgpa);
+        }
     }
 
     // ============================================================== rank + bulk orchestration

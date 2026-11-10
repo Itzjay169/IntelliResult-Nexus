@@ -9,6 +9,7 @@
 </div>
 
 <div class="panel">
+    <div class="table-scroll">
     <table id="coursesTable" class="display" style="width:100%">
         <thead><tr><th>Name</th><th>Code</th><th>Department</th><th>Total Semesters</th><th>Actions</th></tr></thead>
         <tbody>
@@ -26,6 +27,7 @@
         </c:forEach>
         </tbody>
     </table>
+    </div>
 </div>
 
 <c:if test="${not empty deletedCourses}">

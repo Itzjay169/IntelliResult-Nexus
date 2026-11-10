@@ -47,4 +47,11 @@ public class StudentDAOImpl extends AbstractDAO<Student, Long> implements Studen
                 .setParameter("courseId", courseId)
                 .getResultList();
     }
+
+    @Override
+    public List<Student> findBySemester(Long semesterId) {
+        return namedQuery("FROM Student WHERE currentSection.semester.id = :semesterId ORDER BY rollNo")
+                .setParameter("semesterId", semesterId)
+                .getResultList();
+    }
 }

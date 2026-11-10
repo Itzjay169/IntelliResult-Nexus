@@ -10,6 +10,7 @@
             <p class="panel-empty">No activity recorded yet.</p>
         </c:when>
         <c:otherwise>
+            <div class="table-scroll">
             <table id="activityTable" class="display" style="width:100%">
                 <thead>
                 <tr>
@@ -28,6 +29,7 @@
                 </c:forEach>
                 </tbody>
             </table>
+            </div>
         </c:otherwise>
     </c:choose>
 </div>

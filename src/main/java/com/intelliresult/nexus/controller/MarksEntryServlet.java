@@ -1,7 +1,5 @@
 package com.intelliresult.nexus.controller;
 
-import com.intelliresult.nexus.dao.ActivityLogDAO;
-import com.intelliresult.nexus.dao.ActivityLogDAOImpl;
 import com.intelliresult.nexus.dao.StudentDAO;
 import com.intelliresult.nexus.dao.StudentDAOImpl;
 import com.intelliresult.nexus.dao.TeacherDAO;
@@ -15,6 +13,7 @@ import com.intelliresult.nexus.entity.User;
 import com.intelliresult.nexus.exception.AuthorizationException;
 import com.intelliresult.nexus.exception.BaseApplicationException;
 import com.intelliresult.nexus.exception.ValidationException;
+import com.intelliresult.nexus.service.ActivityLogService;
 import com.intelliresult.nexus.service.MarksEntryService;
 import com.intelliresult.nexus.service.dto.MarksEntryGroup;
 import com.intelliresult.nexus.service.dto.StudentMarksInput;
@@ -51,7 +50,7 @@ public class MarksEntryServlet extends HttpServlet {
     private final MarksEntryService marksEntryService = new MarksEntryService();
     private final TeacherDAO teacherDAO = new TeacherDAOImpl();
     private final StudentDAO studentDAO = new StudentDAOImpl();
-    private final ActivityLogDAO activityLogDAO = new ActivityLogDAOImpl();
+    private final ActivityLogService activityLogService = new ActivityLogService();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -101,10 +100,7 @@ public class MarksEntryServlet extends HttpServlet {
 
     private void logUnauthorizedAttempt(User currentUser, HttpServletRequest request, AuthorizationException e) {
         LOGGER.warn("Teacher {} attempted marks entry outside their assignments: {}", currentUser.getEmail(), e.getMessage());
-        // AuthorizationException's own class Javadoc requires this: "always
-        // logged to the audit trail... a security-relevant event worth
-        // recording, not just a UI inconvenience to smooth over."
-        activityLogDAO.save(new ActivityLog(currentUser, "UNAUTHORIZED_MARKS_ENTRY_ATTEMPT", e.getMessage(), request.getRemoteAddr()));
+        activityLogService.log(new ActivityLog(currentUser, "UNAUTHORIZED_MARKS_ENTRY_ATTEMPT", e.getMessage(), request.getRemoteAddr()));
     }
 
     private void readFlashMessages(HttpServletRequest request) {
@@ -132,9 +128,27 @@ public class MarksEntryServlet extends HttpServlet {
             return;
         }
 
-        Long examId = Long.valueOf(request.getParameter("examId"));
-        Long subjectId = Long.valueOf(request.getParameter("subjectId"));
-        Long sectionId = Long.valueOf(request.getParameter("sectionId"));
+        String examIdParam = request.getParameter("examId");
+        String subjectIdParam = request.getParameter("subjectId");
+        String sectionIdParam = request.getParameter("sectionId");
+        Long examId;
+        Long subjectId;
+        Long sectionId;
+        try {
+            if (examIdParam == null || examIdParam.isBlank()
+                    || subjectIdParam == null || subjectIdParam.isBlank()
+                    || sectionIdParam == null || sectionIdParam.isBlank()) {
+                throw new NumberFormatException("Missing IDs");
+            }
+            examId = Long.valueOf(examIdParam);
+            subjectId = Long.valueOf(subjectIdParam);
+            sectionId = Long.valueOf(sectionIdParam);
+        } catch (NumberFormatException e) {
+            request.getSession().setAttribute("flashError", "Invalid or missing examination, subject, or section parameters.");
+            response.sendRedirect(request.getContextPath() + "/teacher/marks-entry");
+            return;
+        }
+
         boolean isSubmit = "submit".equals(request.getParameter("action"));
 
         try {
@@ -152,7 +166,7 @@ public class MarksEntryServlet extends HttpServlet {
                 message = "Saved " + count + " row" + (count == 1 ? "" : "s") + " as draft.";
                 activityAction = "MARKS_ENTRY_SAVED";
             }
-            activityLogDAO.save(new ActivityLog(currentUser, activityAction,
+            activityLogService.log(new ActivityLog(currentUser, activityAction,
                     "Exam #" + examId + ", subject #" + subjectId + ", section #" + sectionId + ": " + count + " row(s)",
                     request.getRemoteAddr()));
 
@@ -170,6 +184,16 @@ public class MarksEntryServlet extends HttpServlet {
             request.getSession().setAttribute("flashError", e.getMessage());
             response.sendRedirect(request.getContextPath() + "/teacher/marks-entry");
         } catch (RuntimeException e) {
+            Throwable cause = e;
+            while (cause != null && !(cause instanceof BaseApplicationException)) {
+                cause = cause.getCause();
+            }
+            if (cause instanceof BaseApplicationException baseEx) {
+                LOGGER.info("Marks entry operation failed: {}", baseEx.getMessage());
+                request.getSession().setAttribute("flashError", baseEx.getMessage());
+                response.sendRedirect(request.getContextPath() + "/teacher/marks-entry");
+                return;
+            }
             LOGGER.error("Unexpected error in marks entry", e);
             Sentry.captureException(e, scope -> scope.setTag("module", "marks-entry"));
             request.getSession().setAttribute("flashError", "Something went wrong. Please try again.");

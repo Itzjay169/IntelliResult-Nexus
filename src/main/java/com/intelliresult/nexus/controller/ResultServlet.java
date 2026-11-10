@@ -1,7 +1,5 @@
 package com.intelliresult.nexus.controller;
 
-import com.intelliresult.nexus.dao.ActivityLogDAO;
-import com.intelliresult.nexus.dao.ActivityLogDAOImpl;
 import com.intelliresult.nexus.dao.ExamDAO;
 import com.intelliresult.nexus.dao.ExamDAOImpl;
 import com.intelliresult.nexus.dao.ResultDAO;
@@ -19,6 +17,7 @@ import com.intelliresult.nexus.entity.ResultSummary;
 import com.intelliresult.nexus.entity.User;
 import com.intelliresult.nexus.exception.BaseApplicationException;
 import com.intelliresult.nexus.exception.ValidationException;
+import com.intelliresult.nexus.service.ActivityLogService;
 import com.intelliresult.nexus.service.ResultRankingService;
 import com.intelliresult.nexus.service.ResultService;
 import com.intelliresult.nexus.util.AppConstants;
@@ -70,7 +69,8 @@ public class ResultServlet extends HttpServlet {
     private final ResultHistoryDAO resultHistoryDAO = new ResultHistoryDAOImpl();
     private final ResultService resultService = new ResultService();
     private final ResultRankingService rankingService = new ResultRankingService();
-    private final ActivityLogDAO activityLogDAO = new ActivityLogDAOImpl();
+    private final ActivityLogService activityLogService = new ActivityLogService();
+    private final com.intelliresult.nexus.service.NotificationService notificationService = new com.intelliresult.nexus.service.NotificationService();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -141,7 +141,7 @@ public class ResultServlet extends HttpServlet {
             byte[] xlsx = ExcelUtil.writeXlsx("Results - " + exam.getName(),
                     ResultRankingService.EXCEL_HEADERS, rankingService.toExcelRows(ranked));
 
-            activityLogDAO.save(new ActivityLog(currentAdmin, "RESULTS_EXPORTED",
+            activityLogService.log(new ActivityLog(currentAdmin, "RESULTS_EXPORTED",
                     "Exported ranked results for " + exam.getName() + " (" + ranked.size() + " students)", request.getRemoteAddr()));
 
             String filename = exam.getName().toLowerCase().replaceAll("[^a-z0-9]+", "_")
@@ -202,7 +202,18 @@ public class ResultServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         User currentAdmin = (User) request.getAttribute(AppConstants.REQUEST_ATTR_CURRENT_USER);
-        Long resultId = Long.valueOf(request.getParameter("resultId"));
+        String resultIdParam = request.getParameter("resultId");
+        Long resultId;
+        try {
+            if (resultIdParam == null || resultIdParam.isBlank()) {
+                throw new NumberFormatException("Missing resultId");
+            }
+            resultId = Long.valueOf(resultIdParam);
+        } catch (NumberFormatException e) {
+            request.getSession().setAttribute("flashError", "Invalid or missing result ID.");
+            response.sendRedirect(request.getContextPath() + "/admin/results");
+            return;
+        }
 
         try {
             BigDecimal newTheory = parseMarks(request.getParameter("theoryMarks"), "Theory");
@@ -212,10 +223,16 @@ public class ResultServlet extends HttpServlet {
 
             Result corrected = resultService.correctResult(resultId, newTheory, newPractical, newInternal, currentAdmin, reason);
 
-            activityLogDAO.save(new ActivityLog(currentAdmin, "RESULT_CORRECTED",
+            activityLogService.log(currentAdmin, "RESULT_CORRECTED",
                     "Result #" + resultId + " (" + corrected.getStudent().getRollNo() + ", "
                             + corrected.getSubject().getSubjectCode() + ") corrected: " + reason,
-                    request.getRemoteAddr()));
+                    request.getRemoteAddr());
+
+            try {
+                notificationService.notifyResultUpdated(corrected, currentAdmin, reason);
+            } catch (Exception e) {
+                LOGGER.error("Could not send result updated notification for result {}", resultId, e);
+            }
 
             flashSuccessAndRedirect(request, response, resultId, "Result corrected. The previous marks are preserved in this result's history.");
         } catch (BaseApplicationException e) {
@@ -263,8 +280,34 @@ public class ResultServlet extends HttpServlet {
         }
     }
 
-    /** Bundles the five optional filter params (Sec. "Ranking range, Section, Semester, Exam, any other useful filters") into one value the JSP can read back to keep form fields sticky after a submit - Semester itself narrows the Exam dropdown client-side (JS below on results.jsp) rather than being a server-side filter, since a ResultSummary belongs to exactly one Exam already. */
-    private record ResultFilters(Long sectionId, Integer rankFrom, Integer rankTo, Boolean passOnly, String search) {
+    /** Bundles the five optional filter params into one value the JSP can read back to keep form fields sticky after a submit. Public class with getters so EL on Tomcat 11 doesn't fail with IllegalAccessException. */
+    public static class ResultFilters {
+        private final Long sectionId;
+        private final Integer rankFrom;
+        private final Integer rankTo;
+        private final Boolean passOnly;
+        private final String search;
+
+        public ResultFilters(Long sectionId, Integer rankFrom, Integer rankTo, Boolean passOnly, String search) {
+            this.sectionId = sectionId;
+            this.rankFrom = rankFrom;
+            this.rankTo = rankTo;
+            this.passOnly = passOnly;
+            this.search = search;
+        }
+
+        public Long getSectionId() { return sectionId; }
+        public Integer getRankFrom() { return rankFrom; }
+        public Integer getRankTo() { return rankTo; }
+        public Boolean getPassOnly() { return passOnly; }
+        public String getSearch() { return search; }
+
+        public Long sectionId() { return sectionId; }
+        public Integer rankFrom() { return rankFrom; }
+        public Integer rankTo() { return rankTo; }
+        public Boolean passOnly() { return passOnly; }
+        public String search() { return search; }
+
         static ResultFilters fromRequest(HttpServletRequest request) {
             return new ResultFilters(
                     parseLong(request.getParameter("sectionId")),

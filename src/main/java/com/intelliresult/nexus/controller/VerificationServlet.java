@@ -1,8 +1,7 @@
 package com.intelliresult.nexus.controller;
 
-import com.intelliresult.nexus.dao.ActivityLogDAO;
-import com.intelliresult.nexus.dao.ActivityLogDAOImpl;
 import com.intelliresult.nexus.entity.ActivityLog;
+import com.intelliresult.nexus.service.ActivityLogService;
 import com.intelliresult.nexus.service.VerificationService;
 import com.intelliresult.nexus.service.dto.VerificationResult;
 import com.intelliresult.nexus.util.DateUtil;
@@ -37,7 +36,7 @@ public class VerificationServlet extends HttpServlet {
     private static final Logger LOGGER = LogManager.getLogger(VerificationServlet.class);
 
     private final VerificationService verificationService = new VerificationService();
-    private final ActivityLogDAO activityLogDAO = new ActivityLogDAOImpl();
+    private final ActivityLogService activityLogService = new ActivityLogService();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -51,7 +50,7 @@ public class VerificationServlet extends HttpServlet {
         // that already covers failed-login attempts). The token itself is
         // never logged, only the outcome - Sec. 41 names "sensitive
         // tokens" explicitly among what must never reach a log.
-        activityLogDAO.save(new ActivityLog(null, "MARKSHEET_VERIFICATION_CHECKED",
+        activityLogService.log(new ActivityLog(null, "MARKSHEET_VERIFICATION_CHECKED",
                 result.valid()
                         ? "Valid - " + result.examName() + " (" + result.academicYearLabel() + ")"
                         : "No matching record for the supplied code",

@@ -3,6 +3,7 @@ package com.intelliresult.nexus.dao;
 import com.intelliresult.nexus.entity.Notification;
 
 import java.util.List;
+import java.util.Optional;
 
 public class NotificationDAOImpl extends AbstractDAO<Notification, Long> implements NotificationDAO {
 
@@ -30,5 +31,29 @@ public class NotificationDAOImpl extends AbstractDAO<Notification, Long> impleme
                 .createQuery("SELECT COUNT(n) FROM Notification n WHERE n.user.id = :userId AND n.read = false", Long.class)
                 .setParameter("userId", userId)
                 .getSingleResult();
+    }
+
+    @Override
+    public boolean existsByRecipientAndEntity(Long userId, String notificationType, String relatedEntityType, Long relatedEntityId) {
+        Long count = session()
+                .createQuery("SELECT COUNT(n) FROM Notification n WHERE n.user.id = :userId AND n.notificationType = :notificationType AND n.relatedEntityType = :relatedEntityType AND n.relatedEntityId = :relatedEntityId", Long.class)
+                .setParameter("userId", userId)
+                .setParameter("notificationType", notificationType)
+                .setParameter("relatedEntityType", relatedEntityType)
+                .setParameter("relatedEntityId", relatedEntityId)
+                .getSingleResult();
+        return count > 0;
+    }
+
+    @Override
+    public Optional<Notification> findLatestByRecipientAndEntity(Long userId, String notificationType, String relatedEntityType, Long relatedEntityId) {
+        return session()
+                .createQuery("FROM Notification n WHERE n.user.id = :userId AND n.notificationType = :notificationType AND n.relatedEntityType = :relatedEntityType AND n.relatedEntityId = :relatedEntityId ORDER BY n.createdAt DESC", Notification.class)
+                .setParameter("userId", userId)
+                .setParameter("notificationType", notificationType)
+                .setParameter("relatedEntityType", relatedEntityType)
+                .setParameter("relatedEntityId", relatedEntityId)
+                .setMaxResults(1)
+                .uniqueResultOptional();
     }
 }
