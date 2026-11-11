@@ -346,30 +346,6 @@ When seed data (`seed-data.sql`) is imported, the following default credentials 
 4. If approved and marks are revised, `ResultService` records the modification in `result_history`, recalculates the affected student's summary, and recalculates section ranks.
 5. An automated notification updates the student regarding the revaluation outcome.
 
----
-
-## Screenshots
-
-| Page / Feature | Description | Screenshot File |
-|---|---|---|
-| **Login Portal** | Clean branded authentication with role routing | `screenshots/01_login_page.png` |
-| **Admin Dashboard** | Institutional KPI cards, pass/fail trends, recent activity | `screenshots/02_admin_dashboard.png` |
-| **Academic Setup** | Hub managing departments, courses, semesters, and sections | `screenshots/03_academic_setup.png` |
-| **Exam Management** | Lifecycle tracking (Scheduled, Active, Published, Locked) | `screenshots/04_admin_exam_management.png` |
-| **Result Approvals** | Administrative review, bulk publishing, and locking | `screenshots/05_admin_result_approvals.png` |
-| **Student Performance Directory** | Cohort performance overview with Latest SGPA and CGPA | `screenshots/06_admin_student_performance_overview.png` |
-| **Student Detailed Profile** | Exam-by-exam component breakdown, strengths/weaknesses | `screenshots/07_admin_student_detail_profile.png` |
-| **Teacher Dashboard** | Faculty workload, assigned classes, and pending marks | `screenshots/08_teacher_dashboard.png` |
-| **Teacher Marks Entry Grid** | Live component marks entry (Theory, Practical, Internal) | `screenshots/09_teacher_marks_entry_grid.png` |
-| **Teacher Student Performance** | Faculty view of assigned class standing and rankings | `screenshots/10_teacher_student_performance.png` |
-| **Student Dashboard** | Academic overview cards (SGPA, CGPA, Rank) & upcoming exams | `screenshots/11_student_dashboard.png` |
-| **Student Results Page** | Full component marks, grades, SGPA, CGPA, and marksheet link | `screenshots/12_student_results_page.png` |
-| **Performance Analytics** | Comparative charts (vs. Class Average, Topper, Subjects) | `screenshots/13_student_performance_analysis.png` |
-| **Marksheet Center** | Official marksheet download with QR verification | `screenshots/14_student_marksheet_center.png` |
-| **Student Profile** | Institutional registration, SGPA, CGPA, and contact info | `screenshots/15_student_profile.png` |
-| **Public QR Verification** | Real-time digital credential verification certificate | `screenshots/16_public_qr_verification.png` |
-
----
 
 ## License
 
