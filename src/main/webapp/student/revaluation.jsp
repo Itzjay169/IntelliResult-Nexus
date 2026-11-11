@@ -63,8 +63,8 @@
                                 <c:otherwise><span class="badge badge-status badge-status-rejected">REJECTED</span></c:otherwise>
                             </c:choose>
                         </td>
-                        <td><c:out value="${not empty req.assignedTeacher ? req.assignedTeacher.user.fullName : '&mdash;'}"/></td>
-                        <td><c:out value="${empty req.teacherReport ? '&mdash;' : req.teacherReport}"/></td>
+                        <td><c:out value="${not empty req.assignedTeacher ? req.assignedTeacher.user.fullName : '-'}"/></td>
+                        <td><c:out value="${not empty req.teacherReport ? req.teacherReport : '-'}"/></td>
                         <td><c:out value="${req.requestedAt}"/></td>
                     </tr>
                 </c:forEach>

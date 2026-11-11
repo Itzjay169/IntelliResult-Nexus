@@ -94,9 +94,9 @@
                                     <td><c:out value="${result.student.rollNo}"/></td>
                                     <td><c:out value="${result.student.user.fullName}"/></td>
                                     <td><c:out value="${result.subject.subjectCode}"/> &mdash; <c:out value="${result.subject.subjectName}"/></td>
-                                    <td><c:out value="${empty result.theoryMarks ? '&mdash;' : result.theoryMarks}"/></td>
-                                    <td><c:out value="${empty result.practicalMarks ? '&mdash;' : result.practicalMarks}"/></td>
-                                    <td><c:out value="${empty result.internalMarks ? '&mdash;' : result.internalMarks}"/></td>
+                                    <td><c:out value="${not empty result.theoryMarks ? result.theoryMarks : '-'}"/></td>
+                                    <td><c:out value="${not empty result.practicalMarks ? result.practicalMarks : '-'}"/></td>
+                                    <td><c:out value="${not empty result.internalMarks ? result.internalMarks : '-'}"/></td>
                                     <td><c:out value="${result.submittedAt}"/></td>
                                 </tr>
                             </c:forEach>

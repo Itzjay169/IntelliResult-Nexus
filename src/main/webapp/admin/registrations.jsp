@@ -74,7 +74,7 @@
                                 <td><c:out value="${req.role}"/></td>
                                 <td><code><c:out value="${req.identifier}"/></code></td>
                                 <td><span class="badge badge-status badge-status-${fn:toLowerCase(req.status)}"><c:out value="${req.status}"/></span></td>
-                                <td><c:out value="${not empty req.reviewedBy ? req.reviewedBy.fullName : '&mdash;'}"/></td>
+                                <td><c:out value="${not empty req.reviewedBy ? req.reviewedBy.fullName : '-'}"/></td>
                                 <td><c:out value="${req.adminRemark}"/></td>
                             </tr>
                         </c:forEach>

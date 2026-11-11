@@ -38,7 +38,7 @@
                             <c:out value="${exam.startTime}"/> &rarr; <c:out value="${exam.endTime}"/>
                             <c:if test="${exam.attemptLimit > 1}"><br><span class="field-hint">Up to <c:out value="${exam.attemptLimit}"/> attempts</span></c:if>
                         </td>
-                        <td><c:out value="${empty exam.defaultMaxMarks ? '&mdash;' : exam.defaultMaxMarks}"/></td>
+                        <td><c:out value="${not empty exam.defaultMaxMarks ? exam.defaultMaxMarks : '-'}"/></td>
                         <td><span class="badge badge-status badge-status-${fn:toLowerCase(exam.status)}"><c:out value="${exam.status}"/></span></td>
                         <td style="white-space:nowrap;">
                             <a href="${ctx}/admin/exams/edit?id=${exam.id}" style="margin-right:0.75rem;">

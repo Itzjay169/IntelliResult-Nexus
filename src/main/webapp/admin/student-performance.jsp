@@ -105,8 +105,8 @@
                                         <c:otherwise>&mdash;</c:otherwise>
                                     </c:choose>
                                 </td>
-                                <td><c:out value="${not empty r.latestSgpa() ? r.latestSgpa() : '&mdash;'}"/></td>
-                                <td><c:out value="${not empty r.currentCgpa() ? r.currentCgpa() : '&mdash;'}"/></td>
+                                <td><c:out value="${not empty r.latestSgpa() ? r.latestSgpa() : '-'}"/></td>
+                                <td><c:out value="${not empty r.currentCgpa() ? r.currentCgpa() : '-'}"/></td>
                                 <td>
                                     <c:choose>
                                         <c:when test="${r.completedExamsCount() == 0}">

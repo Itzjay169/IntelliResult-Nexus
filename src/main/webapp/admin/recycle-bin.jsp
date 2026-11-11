@@ -34,7 +34,7 @@
                     <tr>
                         <td><span class="badge" style="background:var(--color-paper-soft); color:var(--color-ink-soft);"><c:out value="${item.category}"/></span></td>
                         <td><c:out value="${item.label}"/></td>
-                        <td><c:out value="${not empty item.deletedAt ? item.deletedAt : '&mdash;'}"/></td>
+                        <td><c:out value="${not empty item.deletedAt ? item.deletedAt : '-'}"/></td>
                         <td><c:out value="${not empty item.deletedByName ? item.deletedByName : 'Unknown'}"/></td>
                         <td>
                             <a href="#" onclick="confirmRestore('restoreForm${loop.index}', '<c:out value="${item.label}"/>'); return false;" style="color:var(--color-verified); font-weight:600;">Restore</a>

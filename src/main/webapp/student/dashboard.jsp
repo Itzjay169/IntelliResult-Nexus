@@ -28,19 +28,19 @@
 <div class="stat-grid" style="margin-bottom:var(--space-6);">
     <div class="stat-card">
         <div class="label">Current Percentage</div>
-        <div class="value"><c:out value="${not empty latestSummary ? latestSummary.overallPercentage : '&mdash;'}"/>%</div>
+        <div class="value"><c:out value="${not empty latestSummary ? latestSummary.overallPercentage : '-'}"/>%</div>
     </div>
     <div class="stat-card">
         <div class="label">SGPA</div>
-        <div class="value"><c:out value="${empty latestSummary.sgpa ? '&mdash;' : latestSummary.sgpa}"/></div>
+        <div class="value"><c:out value="${not empty latestSummary.sgpa ? latestSummary.sgpa : '-'}"/></div>
     </div>
     <div class="stat-card">
         <div class="label">Cumulative CGPA</div>
-        <div class="value"><c:out value="${empty currentCgpa ? '&mdash;' : currentCgpa}"/></div>
+        <div class="value"><c:out value="${not empty currentCgpa ? currentCgpa : '-'}"/></div>
     </div>
     <div class="stat-card">
         <div class="label">Class Rank</div>
-        <div class="value ${latestSummary.pass ? 'ok' : 'warn'}"><c:out value="${empty latestSummary.classRank ? '&mdash;' : latestSummary.classRank}"/></div>
+        <div class="value ${latestSummary.pass ? 'ok' : 'warn'}"><c:out value="${not empty latestSummary.classRank ? latestSummary.classRank : '-'}"/></div>
     </div>
 </div>
 

@@ -38,13 +38,13 @@
                 <div class="stat-card">
                     <div class="label">Current SGPA</div>
                     <div class="value" style="color:var(--color-brand); font-weight:700;">
-                        <c:out value="${empty currentSgpa ? '&mdash;' : currentSgpa}" />
+                        <c:out value="${not empty currentSgpa ? currentSgpa : '-'}" />
                     </div>
                 </div>
                 <div class="stat-card">
                     <div class="label">Cumulative CGPA</div>
                     <div class="value" style="color:var(--color-brand); font-weight:700;">
-                        <c:out value="${empty currentCgpa ? '&mdash;' : currentCgpa}" />
+                        <c:out value="${not empty currentCgpa ? currentCgpa : '-'}" />
                     </div>
                 </div>
             </div>

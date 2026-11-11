@@ -75,9 +75,6 @@
 </div>
 
 <script>
-    $(document).ready(function() {
-        if ($('#submittedTable tr').length) { $('#submittedTable').DataTable({ order: [], searching: false }); }
-    });
     function toggleDetail(id) {
         var row = document.getElementById(id);
         row.style.display = (row.style.display === 'none') ? 'table-row' : 'none';

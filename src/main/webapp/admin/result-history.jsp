@@ -38,9 +38,9 @@
                 <tbody>
                 <c:forEach items="${history}" var="entry">
                     <tr>
-                        <td><c:out value="${empty entry.oldTheoryMarks && empty entry.newTheoryMarks ? '&mdash;' : entry.oldTheoryMarks}"/> &rarr; <c:out value="${entry.newTheoryMarks}"/></td>
-                        <td><c:out value="${empty entry.oldPracticalMarks && empty entry.newPracticalMarks ? '&mdash;' : entry.oldPracticalMarks}"/> &rarr; <c:out value="${entry.newPracticalMarks}"/></td>
-                        <td><c:out value="${empty entry.oldInternalMarks && empty entry.newInternalMarks ? '&mdash;' : entry.oldInternalMarks}"/> &rarr; <c:out value="${entry.newInternalMarks}"/></td>
+                        <td><c:out value="${empty entry.oldTheoryMarks && empty entry.newTheoryMarks ? '-' : entry.oldTheoryMarks}"/> &rarr; <c:out value="${entry.newTheoryMarks}"/></td>
+                        <td><c:out value="${empty entry.oldPracticalMarks && empty entry.newPracticalMarks ? '-' : entry.oldPracticalMarks}"/> &rarr; <c:out value="${entry.newPracticalMarks}"/></td>
+                        <td><c:out value="${empty entry.oldInternalMarks && empty entry.newInternalMarks ? '-' : entry.oldInternalMarks}"/> &rarr; <c:out value="${entry.newInternalMarks}"/></td>
                         <td><c:out value="${entry.changedBy.fullName}"/></td>
                         <td><c:out value="${entry.changeReason}"/></td>
                         <td><c:out value="${entry.changedAt}"/></td>

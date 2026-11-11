@@ -76,9 +76,9 @@
                     <c:forEach items="${entry.value}" var="r">
                         <tr>
                             <td><c:out value="${r.subject.subjectCode}"/> &mdash; <c:out value="${r.subject.subjectName}"/></td>
-                            <td><c:out value="${empty r.theoryMarks ? '&mdash;' : r.theoryMarks}"/></td>
-                            <td><c:out value="${empty r.practicalMarks ? '&mdash;' : r.practicalMarks}"/></td>
-                            <td><c:out value="${empty r.internalMarks ? '&mdash;' : r.internalMarks}"/></td>
+                            <td><c:out value="${not empty r.theoryMarks ? r.theoryMarks : '-'}"/></td>
+                            <td><c:out value="${not empty r.practicalMarks ? r.practicalMarks : '-'}"/></td>
+                            <td><c:out value="${not empty r.internalMarks ? r.internalMarks : '-'}"/></td>
                             <td><c:out value="${r.totalMarks}"/></td>
                             <td><c:out value="${r.percentage}"/>%</td>
                             <td><c:out value="${r.grade}"/></td>

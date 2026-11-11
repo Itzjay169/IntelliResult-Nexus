@@ -153,11 +153,6 @@
 </c:choose>
 
 <script>
-    $(document).ready(function() {
-        if ($('#resultsTable tr').length) {
-            $('#resultsTable').DataTable({ order: [], paging: true, pageLength: 25, searching: false });
-        }
-    });
     function toggleDetail(id) {
         var row = document.getElementById(id);
         row.style.display = (row.style.display === 'none') ? 'table-row' : 'none';

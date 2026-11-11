@@ -48,15 +48,15 @@
         </div>
         <div class="stat-card">
             <div class="label">Latest SGPA</div>
-            <div class="value" style="color:var(--color-brand); font-weight:700;"><c:out value="${latestSgpa != null ? latestSgpa : '&mdash;'}" escapeXml="false"/></div>
+            <div class="value" style="color:var(--color-brand); font-weight:700;"><c:out value="${latestSgpa != null ? latestSgpa : '-'}"/></div>
         </div>
         <div class="stat-card">
             <div class="label">Cumulative CGPA</div>
-            <div class="value" style="color:var(--color-brand); font-weight:700;"><c:out value="${cumulativeCgpa != null ? cumulativeCgpa : '&mdash;'}" escapeXml="false"/></div>
+            <div class="value" style="color:var(--color-brand); font-weight:700;"><c:out value="${cumulativeCgpa != null ? cumulativeCgpa : '-'}"/></div>
         </div>
         <div class="stat-card">
             <div class="label">Latest Class Rank</div>
-            <div class="value ${latest.pass ? 'ok' : 'warn'}"><c:out value="${empty latest.classRank ? '&mdash;' : latest.classRank}"/></div>
+            <div class="value ${latest.pass ? 'ok' : 'warn'}"><c:out value="${not empty latest.classRank ? latest.classRank : '-'}"/></div>
         </div>
     </c:if>
 </div>
@@ -159,9 +159,9 @@
                         <c:forEach items="${entry.value}" var="r">
                             <tr>
                                 <td><strong><c:out value="${r.subject.subjectCode}"/></strong> &mdash; <c:out value="${r.subject.subjectName}"/></td>
-                                <td><c:out value="${not empty r.theoryMarks ? r.theoryMarks : '&mdash;'}"/></td>
-                                <td><c:out value="${not empty r.practicalMarks ? r.practicalMarks : '&mdash;'}"/></td>
-                                <td><c:out value="${not empty r.internalMarks ? r.internalMarks : '&mdash;'}"/></td>
+                                <td><c:out value="${not empty r.theoryMarks ? r.theoryMarks : '-'}"/></td>
+                                <td><c:out value="${not empty r.practicalMarks ? r.practicalMarks : '-'}"/></td>
+                                <td><c:out value="${not empty r.internalMarks ? r.internalMarks : '-'}"/></td>
                                 <td style="font-weight:600;"><c:out value="${r.totalMarks}"/></td>
                                 <td><c:out value="${r.subject.totalMaxMarks}"/></td>
                                 <td><c:out value="${r.percentage}"/>%</td>
